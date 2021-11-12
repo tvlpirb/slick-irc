@@ -106,23 +106,7 @@ class IrcCon(object):
                     line = line.rstrip()
                     line = line.split()
                     self.incoming(line)
-
-    def incoming(self,line):
-        '''
-        Process incoming messages
-        '''
-        try:
-            # Handle pinging
-            if line[0] == "PING":
-                print("PONGED SERVER")
-                self.sckt.send(bytes(f"PONG {line[1]}\r\n","UTF-8"))
-            else:
-                line = ' '.join(line)
-                self.on_message(line) 
-        except:
-            line = ' '.join(line)
-            self.on_message(line)
-
+ 
     def login(self,NICK,USER,RNAME=None):
         '''
         Login to the IRC server
@@ -148,6 +132,52 @@ class IrcCon(object):
             self.sckt.send(bytes(f"USER {USER} {USER} {USER}: {RNAME}\r\n","UTF-8"))
         else:
             self.on_error("ConnectionRefusedError")
+    
+    def incoming(self,line):
+        '''
+        Process incoming messages
+        '''
+        try:
+            # Handle pinging
+            if line[0] == "PING":
+                print("PONGED SERVER")
+                self.sckt.send(bytes(f"PONG {line[1]}\r\n","UTF-8"))
+            elif self.NICK + "!" in line[0]:
+                # Ignore things such as
+                # :test3!~u@szawf88ssv98q.irc JOIN #test
+                pass
+            elif line[1] == "401":
+                # :server 401 NICK INVALIDNICK :No such nick
+                pass
+            elif line[1] == "403":
+                # :server 403 NICK INVALIDCHAN :N such channel
+                pass
+            elif line[1] == "433":
+                # :server 433 * AttemptedNICK :Nickname is already in use
+                pass
+            elif line[1] == "PRIVMSG":
+                # :test1!~u@szawf88ssv98q.irc PRIVMSG talhah :hello
+                # :test2!~u@szawf88ssv98q.irc PRIVMSG #test :hello
+                who = line[0].split("!")
+                who = who[0].lstrip(":")
+                channel = line[2]
+                msg = line[3:].lstrip(":")
+                self.on_message(who,channel,msg)
+            elif line[1] == "NOTICE":
+                # :talhah.test NOTICE test3 :Server is shutting down
+                # :*.joseon.kr NOTICE * :*** You must use TLS/SSL and authenticate via SASL 
+                notice = ' '.join(line[3:])
+                notice = notice.lstrip(":")
+                if notice == "Server is shutting down":
+                    self.on_server_shutdown()
+                if "You must use TLS/SSL" in notice:
+                    self.on_error("SSLRequired")
+            else:
+                line = ' '.join(line)
+                self.unknown_message(line) 
+        except:
+            line = ' '.join(line)
+            self.unknown_message(line)
 
     # Join a channel 
     def join(self,channel,key=None):
@@ -176,5 +206,11 @@ class IrcCon(object):
         pass
     
     # Called on message
-    def on_message(self,line):
+    def on_message(self,who,channel,msg):
+        pass
+
+    def unknown_message(self,line):
+        pass
+    
+    def on_server_shutdown(self):
         pass
