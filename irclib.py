@@ -3,7 +3,6 @@
 # Email: hello@talhah.tech
 import socket
 import threading
-import time
 from select import select
 
 class IrcCon(object):
@@ -16,12 +15,25 @@ class IrcCon(object):
     
     Methods:
         connect(HOST,PORT)
-            - HOST=127.0.0.1 default
-            - PORT=6667 default
+            connects to an IRC server
+        login(NICK,USER,RNAME=None)
+            login to the server with these details
+        join(channel,key=None)
+            join a channel, possibly a secured one
+        part(channel)
+            part from a channel
+        privmsg(who,msg)
+            send a message to a channel or individual
+        quitC(msg=None)
+            quit and send a message
     '''
     # Initialise a socket connection and also the default HOST and PORT
     # which are set to 127.0.0.1:6667
     def __init__(self):
+        '''
+        Constructor for IrcCon class, initializes the socket, default host,
+        port, nick, user and realname. Sets connected to False
+        '''
         # https://docs.python.org/3/library/socket.html
         # AF_INET is for ipv4 IPS and domains, SOCK_STREAM is socket type,
         # in this case a constant two way TCP socket.
@@ -29,13 +41,30 @@ class IrcCon(object):
         self.HOST = "127.0.0.1" # default irc server
         self.PORT = 6667 # default plaintext port
         self.NICK = ""
+        self.USER = ""
+        self.RNAME = ""
         self.connected = False
 
-    def on_error(self,errorType):
-        pass
-    
-    # Connect to IRC server
     def connect(self,HOST=None,PORT=None):
+        '''
+        Connects to the IRC server, if sucessful starts receive loop in a
+        thread.
+
+        Parameters:
+        -----------
+        HOST : str
+            The server URL or IP address, only supports IPv4, defaults to
+            localhost
+        PORT : int
+            The port to connect to, defaults to 6667
+        
+        Calls:
+        ------
+        self.on_connect() : func
+            Called upon sucessful connection to server
+        self.on_error("ConnectionRefusedError")
+            Called if cannot reach server
+        '''
         # Non-default HOST and PORT
         if not HOST:
             self.HOST = HOST
@@ -44,6 +73,7 @@ class IrcCon(object):
         try:
             self.sckt.connect((self.HOST,self.PORT))
             self.connected = True
+            self.on_connect()
             thread = threading.Thread(target=self.recv_loop,args=[self.sckt]) 
             thread.daemon = True
             thread.start() 
@@ -51,20 +81,100 @@ class IrcCon(object):
             self.on_error("ConnectionRefusedError")
     
     def recv_loop(self,con):
+        '''
+        Receive loop to receive incoming messages
+
+        Parameters:
+        -----------
+        con : socket
+            The socket which is receiving incoming messages
+        '''
         while True:
-            # Check for data every 0.1 seconds, otherwise timeout
-            (r,wx,e) = select([con],[],[con],0.1)
-            # There is data available
-            if r: 
+            # Check if there is any data on socket, timeout after 0.1s
+            # prevent unecessary socket.recv
+            (r,wx,error) = select([con], [], [con], 0.1)
+            # Data to read
+            if r:
                 buffer = ""
-                buffer += self.sckt.recv(2048).decode("UTF-8")
+                buffer += buffer+self.sckt.recv(1024).decode("UTF-8")
                 temp = buffer.split("\n")
+                # We need to pop last element as when we receive data it has
+                # \r\n and we are splitting by \n, so we'd go from "hello\r\n"
+                # to ["hello\r",""] and that last element needs to be ignored
+                temp.pop(-1)
                 for line in temp:
                     line = line.rstrip()
-                    print(line)
-            
-    def login(self,NICK,USER,RNAME):
+                    line = line.split()
+                    self.incoming(line)
+
+    def incoming(self,line):
+        '''
+        Process incoming messages
+        '''
+        try:
+            # Handle pinging
+            if line[0] == "PING":
+                print("PONGED SERVER")
+                self.sckt.send(bytes(f"PONG {line[1]}\r\n","UTF-8"))
+            else:
+                line = ' '.join(line)
+                self.on_message(line) 
+        except:
+            line = ' '.join(line)
+            self.on_message(line)
+
+    def login(self,NICK,USER,RNAME=None):
+        '''
+        Login to the IRC server
+
+        Parameters:
+        -----------
+        NICK : str
+            The desired nick
+        USER : str
+            The desired username
+        RNAME : str
+            Real name of user, defaults to nick
+        '''
         self.NICK = NICK
-        self.sckt.send(bytes(f"NICK {self.NICK}\r\n","UTF-8"))
-        self.sckt.send(bytes(f"USER {USER} {USER} {USER}: {RNAME}\r\n","UTF-8"))
- 
+        self.USER = USER
+        # If a real name specified
+        if RNAME:
+            self.RNAME = RNAME
+        else:
+            self.RNAME = NICK
+        if self.connected:
+            self.sckt.send(bytes(f"NICK {self.NICK}\r\n","UTF-8"))
+            self.sckt.send(bytes(f"USER {USER} {USER} {USER}: {RNAME}\r\n","UTF-8"))
+        else:
+            self.on_error("ConnectionRefusedError")
+
+    # Join a channel 
+    def join(self,channel,key=None):
+        if key:
+            self.sckt.send(bytes(f"JOIN {channel} {key}\r\n","UTF-8"))
+        self.sckt.send(bytes(f"JOIN {channel}\r\n","UTF-8"))
+
+    # Part a channel
+    def part(self,channel):
+        self.sckt.send(bytes(f"PART {channel}\r\n","UTF-8"))
+
+    # Message an individual or channel
+    def privmsg(self,who,msg):
+        self.sckt.send(bytes(f"PRIVMSG {who} :{msg}\r\n","UTF-8"))
+    
+    # Indicate to server that client is quitting
+    def quitC(self,msg=None):
+        if not msg:
+            msg = self.NICK
+        self.sckt.send(bytes(f"QUIT :{msg}","UTF-8"))
+    
+    def on_connect(self):
+        pass
+
+    def on_error(self,errorType):
+        pass
+    
+    # Called on message
+    def on_message(self,line):
+        pass
