@@ -161,7 +161,8 @@ class IrcCon(object):
                 who = line[0].split("!")
                 who = who[0].lstrip(":")
                 channel = line[2]
-                msg = line[3:].lstrip(":")
+                msg = ' '.join(line[3:])
+                msg = msg.lstrip(":")
                 self.on_message(who,channel,msg)
             elif line[1] == "NOTICE":
                 # :talhah.test NOTICE test3 :Server is shutting down
