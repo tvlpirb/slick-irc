@@ -9,6 +9,7 @@ import logging
 logging.basicConfig(filename='run.log', filemode='w', format='%(asctime)s - %(levelname)s - %(message)s',datefmt='%d-%b-%y %H:%M:%S')
 
 sg.theme("Topanga")
+#### CUSTOM EXCEPTIONS ####
 class EmptyValue(Exception):
     def __init__(self):
         self.message = "User Input is required"
@@ -25,6 +26,13 @@ class Client(IrcCon):
         '''
         IrcCon.__init__(self)
         self.window = window
+    
+    def on_error(self,errorType):
+        if errorType == "ConnectionRefusedError":
+            logging.warning(f"{errorType} Cannot connect to server")
+            errorWin("Cannot connect to server")
+            logging.info("Asking user to enter information again")
+            loginWin(self.HOST,self.PORT,nick,user,rname)
 
 # Window for displaying error messages
 def errorWin(message):
@@ -39,23 +47,27 @@ def errorWin(message):
 
 # Window for entering login details for a server
 # Returns a tuple containing (server,nick,user,rname)
-def loginWin():
+def loginWin(serv="",port="",nick="",user="",rname=""):
+    # Default to empty string if not specified
+    (server,port,nick,user,rname) = (serv,port,nick,user,rname)
     # Window layout
     loginLayout = [
-        [sg.Text("Server:"),sg.Multiline(size=(25,1),enter_submits=False, key='SERV', do_not_clear=True)],
-        [sg.Text("Alias/Nick:"),sg.Multiline(size=(25, 1), enter_submits=False, key='NICK', do_not_clear=True)],
-        [sg.Text("Username:"),sg.Multiline(size=(25, 1), enter_submits=True, key='USER', do_not_clear=True)],
-        [sg.Text("Realname: (Optional)"),sg.Multiline(size=(25, 1), enter_submits=True, key='RNAME', do_not_clear=True)],
+        [sg.Text("Server:"),sg.Multiline(size=(17,1),default_text=server,enter_submits=False, key='SERV', do_not_clear=True),
+        sg.Text("Port:"),sg.Multiline(size=(6,1),default_text=port,enter_submits=False, key='PORT', do_not_clear=True)],
+        [sg.Text("Alias/Nick:"),sg.Multiline(size=(25, 1), default_text=nick,enter_submits=False, key='NICK', do_not_clear=True)],
+        [sg.Text("Username:"),sg.Multiline(size=(25, 1), default_text=user, enter_submits=True, key='USER', do_not_clear=True)],
+        [sg.Text("Realname: (Optional)"),sg.Multiline(size=(25, 1), default_text=rname, enter_submits=True, key='RNAME', do_not_clear=True)],
         [sg.Button("CONNECT",bind_return_key=True)]
     ]
     loginWin = sg.Window("Login",loginLayout,element_justification="c",finalize=True)
     # See below link to manage switching fields when pressing enter
     # https://stackoverflow.com/questions/65923933/pysimplegui-set-and-get-the-cursor-position-in-a-multiline-widget
-    b1,b2,b3,b4 = loginWin["SERV"],loginWin["NICK"],loginWin["USER"],loginWin["RNAME"]
+    b1,b2,b3,b4,b5 = loginWin["SERV"],loginWin["PORT"],loginWin["NICK"],loginWin["USER"],loginWin["RNAME"]
     # Bind return, gives an event with name KEY_Return
     b1.bind("<Return>", "_Return")
     b2.bind("<Return>", "_Return")
     b3.bind("<Return>", "_Return")
+    b4.bind("<Return>","_Return")
     while True:
         ev2, vals2 = loginWin.read(timeout=10)
         try:
@@ -73,6 +85,14 @@ def loginWin():
                 loginWin["SERV"].update(server)
                 # Move caret to Alias field
                 b2.set_focus()
+            elif ev2 == "PORT_Return":
+                port = loginWin["PORT"].get()
+                if port == "":
+                    raise EmptyValue
+                port = port.strip("\n")
+                loginWin["PORT"].update(port)
+                # Move the caret to nick field
+                b3.set_focus()
             elif ev2 == "NICK_Return":
                 nick = loginWin["NICK"].get()
                 if nick == "":
@@ -80,7 +100,7 @@ def loginWin():
                 nick = nick.strip("\n")
                 loginWin["NICK"].update(nick)
                 # Move caret to username field
-                b3.set_focus()
+                b4.set_focus()
             elif ev2 == "USER_Return":
                 user = loginWin["USER"].get()
                 if nick == "":
@@ -88,16 +108,18 @@ def loginWin():
                 user = user.strip("\n")
                 loginWin["USER"].update(user)
                 # Move caret to realname field
-                b4.set_focus()
+                b5.set_focus()
+            #elif ev2 == "SERV_Return":
         except EmptyValue:
             logging.warning("Blank fields on login page")
-            errorWin("Please fill out all the fields")
-        
+            errorWin("Please fill out all the fields") 
     loginWin.close()
-    return (server,nick,user,rname)
+    return (server,int(port),nick,user,rname)
 
+# Returns the main window layout
 def mainLayout():
-    info = [[sg.Multiline(size=(75,15),font=('Helvetica 10'),key="info",reroute_stdout=True,autoscroll=True)]]
+    # Box to display server info and other information non-specific to channels
+    info = [[sg.Multiline(size=(75,15),font=('Helvetica 10'),key="infoB",reroute_stdout=False,autoscroll=True)]]
     layout = [[sg.Text("Chat",size=(40,1))],
         [sg.TabGroup([[sg.Tab("info",info)]],key="chats",selected_background_color="grey")],
         [sg.Multiline(size=(70, 5), enter_submits=True, key='msgbox', do_not_clear=True),
@@ -106,4 +128,7 @@ def mainLayout():
         ]]
     return layout
 
-(server,nick,user,rname) = loginWin()
+(server,port,nick,user,rname) = loginWin("127.0.0.1","6667")
+mainWin = sg.Window("Slick IRC",mainLayout(),font=("Helvetica","13"),default_button_element_size=(8,2))
+irc = Client(mainWin)
+irc.connect(server,port)
