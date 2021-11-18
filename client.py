@@ -250,7 +250,7 @@ tabHist = ["info"]
 openTabs = ["info"]
 while True:
     # Event and values
-    ev1, vals1 = mainWin.read(timeout=10)
+    ev1, vals1 = mainWin.read()
     # We haven't sucessfully logged in yet
     if not loggedIn:
         irc.login(nick,user,rname)
