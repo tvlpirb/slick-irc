@@ -131,7 +131,7 @@ class IrcCon(object):
         self.NICK = NICK
         self.USER = USER
         # If a real name specified
-        if RNAME:
+        if RNAME and RNAME != "":
             self.RNAME = RNAME
         else:
             self.RNAME = NICK
@@ -139,7 +139,7 @@ class IrcCon(object):
             self.sckt.send(bytes(f"NICK {self.NICK}\r\n","UTF-8"))
             # We haven't already submitted a username of client
             if not self.userDone:
-                self.sckt.send(bytes(f"USER {USER} {USER} {USER}: {RNAME}\r\n","UTF-8"))
+                self.sckt.send(bytes(f"USER {self.USER} {self.USER} {self.USER}: {self.RNAME}\r\n","UTF-8"))
                 self.userDone = True
             self.failedLogin = False
         else:
@@ -232,6 +232,7 @@ class IrcCon(object):
 
     # Part a channel
     def part(self,channel):
+        self.channels.remove(channel)
         self.sckt.send(bytes(f"PART {channel}\r\n","UTF-8"))
 
     # Message an individual or channel
