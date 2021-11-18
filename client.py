@@ -5,7 +5,7 @@ from irclib import IrcCon
 # PySimpleGUI is a wrapper for tkinter and some other frameworks
 import PySimpleGUI as sg
 import logging
-
+import time
 logging.basicConfig(filename='run.log', filemode='w', format='%(asctime)s - %(levelname)s - %(message)s',datefmt='%d-%b-%y %H:%M:%S')
 
 sg.theme("Topanga")
@@ -33,14 +33,24 @@ class Client(IrcCon):
             errorWin("Cannot connect to server")
             logging.info("Asking user to enter information again")
             loginWin(self.HOST,self.PORT,nick,user,rname)
+        if errorType == "NickInUse":
+            self.failedLogin = True
+            logging.warning(f"{errorType}")
+            #(server,host,port,nick,user,rname) = loginWin(self.HOST,self.PORT,nick,user,rname)
+            #self.login(nick,user,rname)
 
+    def unknown_message(self,line):
+        msg = self.window["infoB"].get() + "\n" + line
+        self.window["infoB"].update(msg)
+        #print(line)
+        
 # Window for displaying error messages
 def errorWin(message):
     errorLayout = [[sg.Text(f"{message}")],
     [sg.Button("Okay",bind_return_key=True)]]
     errorWin = sg.Window("Error",errorLayout,element_justification="c",finalize=True)
     while True:
-        ev3,vals3 = errorWin.read()
+        ev3,vals3 = errorWin.read(timeout=10)
         if ev3 == sg.WIN_CLOSED or ev3 == "Okay":
             break
     errorWin.close()
@@ -119,7 +129,7 @@ def loginWin(serv="",port="",nick="",user="",rname=""):
 # Returns the main window layout
 def mainLayout():
     # Box to display server info and other information non-specific to channels
-    info = [[sg.Multiline(size=(75,15),font=('Helvetica 10'),key="infoB",reroute_stdout=False,autoscroll=True)]]
+    info = [[sg.Multiline(size=(75,15),font=('Helvetica 10'),key="infoB",reroute_stdout=False,autoscroll=True,disabled=True)]]
     layout = [[sg.Text("Chat",size=(40,1))],
         [sg.TabGroup([[sg.Tab("info",info)]],key="chats",selected_background_color="grey")],
         [sg.Multiline(size=(70, 5), enter_submits=True, key='msgbox', do_not_clear=True),
@@ -129,6 +139,24 @@ def mainLayout():
     return layout
 
 (server,port,nick,user,rname) = loginWin("127.0.0.1","6667")
-mainWin = sg.Window("Slick IRC",mainLayout(),font=("Helvetica","13"),default_button_element_size=(8,2))
+mainWin = sg.Window("Slick IRC",mainLayout(),font=("Helvetica","13"),default_button_element_size=(8,2),finalize=True)
 irc = Client(mainWin)
 irc.connect(server,port)
+loggedIn = False
+failedLogin = False
+
+tabHist = ["info"]
+while True:
+    ev1, vals1 = mainWin.read(timeout=10)
+    if not loggedIn:
+        irc.login(nick,user,rname)
+        loggedIn = True
+    if irc.failedLogin:
+        errorWin("Nickname in use, try a different one!")
+        (server,port,nick,user,rname) = loginWin(server,port,nick,user,rname)
+        loggedIn = False
+    if ev1 == sg.WIN_CLOSED or ev1 == "EXIT":
+        break
+    
+
+mainWin.close()
