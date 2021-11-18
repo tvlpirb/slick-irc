@@ -44,6 +44,9 @@ class IrcCon(object):
         self.USER = ""
         self.RNAME = ""
         self.connected = False
+        self.channels = set()
+        self.startWhoList = False
+        self.names = dict()
 
     def connect(self,HOST=None,PORT=None):
         '''
@@ -66,12 +69,13 @@ class IrcCon(object):
             Called if cannot reach server
         '''
         # Non-default HOST and PORT
-        if not HOST:
+        if HOST != self.HOST:
             self.HOST = HOST
-        if not PORT:
+        if PORT != self.PORT:
             self.PORT = PORT
         try:
             self.sckt.connect((self.HOST,self.PORT))
+            print(self.sckt)
             self.connected = True
             self.on_connect()
             thread = threading.Thread(target=self.recv_loop,args=[self.sckt]) 
@@ -165,14 +169,41 @@ class IrcCon(object):
                 msg = msg.lstrip(":")
                 self.on_message(who,channel,msg)
             elif line[1] == "NOTICE":
-                # :talhah.test NOTICE test3 :Server is shutting down
-                # :*.joseon.kr NOTICE * :*** You must use TLS/SSL and authenticate via SASL 
                 notice = ' '.join(line[3:])
                 notice = notice.lstrip(":")
                 if notice == "Server is shutting down":
                     self.on_server_shutdown()
                 if "You must use TLS/SSL" in notice:
                     self.on_error("SSLRequired")
+            elif line[1] == "JOIN":
+                #:talhah!~u@szawf88ssv98q.irc JOIN #test
+                who = line[0].split("!")
+                hostname = who[1]
+                who = who[0].lstrip(":")
+                channel = line[2]
+                self.on_user_join(who,channel,hostname)
+            elif line[1] == "PART":
+                #:talhah!~u@szawf88ssv98q.irc PART #test
+                who = line[0].split("!")
+                hostname = who[1]
+                who = who[0].lstrip(":")
+                channel = line[2]
+                self.on_user_part(who,channel,hostname)
+                #:talhah.test 311 test talhah ~u szawf88ssv98q.irc * talhah
+            elif line[1] == "311":
+                self.startWhoList = True
+                self.on_whois(line)
+            elif self.startWhoList:
+                self.on_whois(line)
+            elif line[1] == "318":
+                self.startWhoList = False
+                #:talhah.test 353 talhah = #test :test talhah foo
+            elif line[1] == "353":
+                channel = line[4]
+                names = line[6:]
+                if len(line) == 5:
+                    names = []
+                self.on_names(channel, names)
             else:
                 line = ' '.join(line)
                 self.unknown_message(line) 
@@ -184,6 +215,10 @@ class IrcCon(object):
     def join(self,channel,key=None):
         if key:
             self.sckt.send(bytes(f"JOIN {channel} {key}\r\n","UTF-8"))
+        if channel in self.channels:
+            self.on_error("AlreadyInChan")
+        else:
+            self.channels.add(channel)
         self.sckt.send(bytes(f"JOIN {channel}\r\n","UTF-8"))
 
     # Part a channel
@@ -193,6 +228,9 @@ class IrcCon(object):
     # Message an individual or channel
     def privmsg(self,who,msg):
         self.sckt.send(bytes(f"PRIVMSG {who} :{msg}\r\n","UTF-8"))
+    
+    def whois(self,who):
+        self.sckt.send(bytes(f"WHOIS {who}\r\n","UTF-8"))
     
     # Indicate to server that client is quitting
     def quitC(self,msg=None):
@@ -206,8 +244,19 @@ class IrcCon(object):
     def on_error(self,errorType):
         pass
     
+    def on_user_join(self,who,channel,hostname):
+        pass
+
+    def on_user_part(self,who,channel,hostname):
+        pass
     # Called on message
     def on_message(self,who,channel,msg):
+        pass
+
+    def on_whois(self,line):
+        pass
+
+    def on_names(self,channel,names):
         pass
 
     def unknown_message(self,line):
