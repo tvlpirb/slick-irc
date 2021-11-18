@@ -222,7 +222,16 @@ def processCommand(win,irc,query):
                     delete_tab(win,chan)
                     irc.part(chan)
                 else:
-                    win[f"{currentTab}B"].update("Need to be in channel",append=True)                
+                    win[f"{currentTab}B"].update("Need to be in channel",append=True)
+        elif query[0].lower() == "whois":
+            irc.whois(query[1])
+        elif query[0].lower() == "unread":
+            channels = query[1:]
+            for chan in channels:
+                if chan in irc.channels:
+                    markUnread(chan)
+        else:
+            raise InvalidCommand       
     except InvalidCommand:
         logging.warning("User gave an invalid command")
         win["infoB"].update("Unknown command\n",append=True)
@@ -234,6 +243,12 @@ def sendMsg(win,irc,chan,msg):
         win[f"{chan}B"].update(f"{irc.NICK} > " + msg + "\n",append=True)
         irc.privmsg(f"{chan}",msg)
     win["msgbox"].update("")
+
+#SPLASH_IMAGE_FILE = 'grades.png'
+#DISPLAY_TIME_MILLISECONDS = 100
+#sg.Window('',
+#    [[sg.Image(SPLASH_IMAGE_FILE)]], transparent_color=sg.theme_background_color(),
+#    no_titlebar=True, keep_on_top=True).read(timeout=DISPLAY_TIME_MILLISECONDS, close=True)
 
 # Initial login window
 (server,port,nick,user,rname) = loginWin("127.0.0.1","6667")
@@ -250,7 +265,7 @@ tabHist = ["info"]
 openTabs = ["info"]
 while True:
     # Event and values
-    ev1, vals1 = mainWin.read()
+    ev1, vals1 = mainWin.read(timeout=1)
     # We haven't sucessfully logged in yet
     if not loggedIn:
         irc.login(nick,user,rname)
