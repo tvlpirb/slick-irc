@@ -47,6 +47,8 @@ class IrcCon(object):
         self.channels = set()
         self.startWhoList = False
         self.names = dict()
+        self.userDone = False
+        self.failedLogin = False
 
     def connect(self,HOST=None,PORT=None):
         '''
@@ -75,14 +77,15 @@ class IrcCon(object):
             self.PORT = PORT
         try:
             self.sckt.connect((self.HOST,self.PORT))
-            print(self.sckt)
             self.connected = True
             self.on_connect()
             thread = threading.Thread(target=self.recv_loop,args=[self.sckt]) 
             thread.daemon = True
             thread.start() 
+            return True
         except:
             self.on_error("ConnectionRefusedError")
+            return False
     
     def recv_loop(self,con):
         '''
@@ -124,6 +127,7 @@ class IrcCon(object):
         RNAME : str
             Real name of user, defaults to nick
         '''
+        
         self.NICK = NICK
         self.USER = USER
         # If a real name specified
@@ -133,7 +137,11 @@ class IrcCon(object):
             self.RNAME = NICK
         if self.connected:
             self.sckt.send(bytes(f"NICK {self.NICK}\r\n","UTF-8"))
-            self.sckt.send(bytes(f"USER {USER} {USER} {USER}: {RNAME}\r\n","UTF-8"))
+            # We haven't already submitted a username of client
+            if not self.userDone:
+                self.sckt.send(bytes(f"USER {USER} {USER} {USER}: {RNAME}\r\n","UTF-8"))
+                self.userDone = True
+            self.failedLogin = False
         else:
             self.on_error("ConnectionRefusedError")
     
@@ -157,6 +165,7 @@ class IrcCon(object):
                 # :server 403 NICK INVALIDCHAN :N such channel
                 pass
             elif line[1] == "433":
+                self.on_error("NickInUse")
                 # :server 433 * AttemptedNICK :Nickname is already in use
                 pass
             elif line[1] == "PRIVMSG":
