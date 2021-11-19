@@ -52,7 +52,7 @@ class Client(IrcCon):
             #self.login(nick,user,rname)
     
     def on_message(self,who,channel,msg):
-        msg = f"{who} > {msg}"
+        msg = f"{current_time} | {who} > {msg}"
         if channel == self.NICK:
             channel = who
         if channel not in self.channels:
@@ -62,6 +62,15 @@ class Client(IrcCon):
         self.window[f"{channel}B"].update(msg + "\n",append=True)
         markUnread(channel)
 
+    def on_user_join(self,who,channel,hostname):
+        msg = f"{current_time} | ---> {who} ({hostname}) has joined {channel}\n"
+        self.window[f"{channel}B"].update(msg,text_color_for_value="green",append=True)
+        markUnread(channel)
+    
+    def on_user_part(self,who,channel,hostname):
+        msg = f"{current_time} | <--- {who} ({hostname}) has parted {channel}\n"
+        self.window[f"{channel}B"].update(msg,text_color_for_value="orange",append=True)        
+        markUnread(channel)
 
     def unknown_message(self,line):
         # This used to "print" to infoB box which had all console output rerouted to it
@@ -201,6 +210,8 @@ def markRead(tab):
     tabgroup.tab(i,text=title)
 
 def processCommand(win,irc,query):
+    global nick
+    global loggedIn
     query = query.lstrip("/")
     try:
         if query == "":
@@ -230,6 +241,10 @@ def processCommand(win,irc,query):
             for chan in channels:
                 if chan in irc.channels:
                     markUnread(chan)
+        elif query[0].lower() == "nick":
+            if len(query) == 2:
+                nick = query[1]
+                loggedIn = False
         else:
             raise InvalidCommand       
     except InvalidCommand:
@@ -240,20 +255,16 @@ def processCommand(win,irc,query):
 
 def sendMsg(win,irc,chan,msg):
     if vals1["chats"] != "info":
-        win[f"{chan}B"].update(f"{irc.NICK} > " + msg + "\n",append=True)
         irc.privmsg(f"{chan}",msg)
+        msg = f"{current_time} | {irc.NICK} > " + msg + "\n"
+        win[f"{chan}B"].update(msg,append=True)
     win["msgbox"].update("")
 
-#SPLASH_IMAGE_FILE = 'grades.png'
-#DISPLAY_TIME_MILLISECONDS = 100
-#sg.Window('',
-#    [[sg.Image(SPLASH_IMAGE_FILE)]], transparent_color=sg.theme_background_color(),
-#    no_titlebar=True, keep_on_top=True).read(timeout=DISPLAY_TIME_MILLISECONDS, close=True)
-
+t = time.localtime()
 # Initial login window
 (server,port,nick,user,rname) = loginWin("127.0.0.1","6667")
 # Initialize main window thereafter
-mainWin = sg.Window("Slick IRC",mainLayout(),font=("Helvetica","13"),default_button_element_size=(8,2),finalize=True)
+mainWin = sg.Window("Slick IRC",mainLayout(),font=("Helvetica","13"),default_button_element_size=(8,2),finalize=False)
 # Initialize irc client and connect
 irc = Client(mainWin)
 irc.connect(server,port)
@@ -266,6 +277,8 @@ openTabs = ["info"]
 while True:
     # Event and values
     ev1, vals1 = mainWin.read(timeout=1)
+    t = time.localtime()
+    current_time = time.strftime("%H:%M:%S", t)
     # We haven't sucessfully logged in yet
     if not loggedIn:
         irc.login(nick,user,rname)
