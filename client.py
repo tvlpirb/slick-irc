@@ -72,6 +72,10 @@ class Client(IrcCon):
         self.window[f"{channel}B"].update(msg,text_color_for_value="orange",append=True)        
         markUnread(channel)
 
+    def on_whois(self,line):
+        line = line + "\n"
+        self.window["infoB"].update(line,append=True)
+
     def unknown_message(self,line):
         # This used to "print" to infoB box which had all console output rerouted to it
         # that would apparently lead to a race condition when printing too fast? 
@@ -235,7 +239,8 @@ def processCommand(win,irc,query):
                 else:
                     win[f"{currentTab}B"].update("Need to be in channel",append=True)
         elif query[0].lower() == "whois":
-            irc.whois(query[1])
+            if len(query) == 2:
+                irc.whois(query[1])
         elif query[0].lower() == "unread":
             channels = query[1:]
             for chan in channels:
