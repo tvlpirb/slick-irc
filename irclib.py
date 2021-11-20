@@ -152,7 +152,6 @@ class IrcCon(object):
         try:
             # Handle pinging
             if line[0] == "PING":
-                print("PONGED SERVER")
                 self.sckt.send(bytes(f"PONG {line[1]}\r\n","UTF-8"))
             elif self.NICK + "!" in line[0]:
                 # Ignore things such as
@@ -199,6 +198,15 @@ class IrcCon(object):
                 channel = line[2]
                 self.on_user_part(who,channel,hostname)
                 #:talhah.test 311 test talhah ~u szawf88ssv98q.irc * talhah
+            elif line[1] == "NICK":
+                #:talhah!~u@szawf88ssv98q.irc NICK test1
+                who = line[0].split("!")
+                hostname = who[1]
+                who = who[0].lstrip(":")
+                newNick = line[2]
+                # Ignore our own name change
+                if newNick != self.NICK:
+                    self.on_user_nick_change(who,newNick)
             elif line[1] == "311":
                 self.startWhoList = True
                 self.on_whois(line)
@@ -213,6 +221,9 @@ class IrcCon(object):
                 if len(line) == 5:
                     names = []
                 self.on_names(channel, names)
+            # Ignore end of whois list 366
+            elif line[1] == "366":
+                pass
             else:
                 line = ' '.join(line)
                 self.unknown_message(line) 
@@ -267,6 +278,9 @@ class IrcCon(object):
         pass
 
     def on_names(self,channel,names):
+        pass
+
+    def on_user_nick_change(self,who,newNick):
         pass
 
     def unknown_message(self,line):
