@@ -270,6 +270,13 @@ class IrcCon(object):
         self.connect(self.HOST,self.PORT)
         self.login(self.NICK,self.USER,self.RNAME)
 
+    def disconnect(self):
+        self.sckt.shutdown(socket.SHUT_RDWR)
+        self.sckt.close()
+        self.sckt = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        self.userDone = False
+        self.connected = False
+
     def on_connect(self):
         pass
 
