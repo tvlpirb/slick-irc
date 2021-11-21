@@ -13,7 +13,7 @@ from irclib import IrcCon
 import PySimpleGUI as sg
 import logging
 import time
-from windows import loginWin,errorWin,commandsWin
+from windows import loginWin,errorWin,commandsWin,aboutWin
 logging.basicConfig(filename='run.log', filemode='w', format='%(asctime)s - %(levelname)s - %(message)s',datefmt='%d-%b-%y %H:%M:%S')
 
 sg.theme("Topanga")
@@ -91,7 +91,7 @@ class Client(IrcCon):
 def mainLayout():
     # Box to display server info and other information non-specific to channels
     info = [[sg.Multiline(size=(75,15),font=('Helvetica 10'),key="infoB",reroute_stdout=False,autoscroll=True,disabled=True)]]
-    menu = ['SlickIRC', ['&Exit']],['&Server'],['&Help', ['&Commands', '---', '&About']]
+    menu = ['SlickIRC', ['&Exit']],['&Server',['Server settings']],['&Help', ['&Commands', '---', '&About']]
     layout = [[sg.Menu(menu)],
         [sg.TabGroup([[sg.Tab("info",info)]],key="chats",selected_background_color="grey")],
         [sg.Multiline(size=(70, 5), enter_submits=True, key='msgbox', do_not_clear=True),
@@ -240,8 +240,17 @@ while True:
     if vals1["chats"] != "info":
         if vals1["chats"].startswith("*"):
             markRead(vals1["chats"])
+    if ev1 == "Server settings":
+        (oldServ,oldPort) = (server,port)
+        (server,port,nick,user,rname) = loginWin(server,port,nick,user,rname)
+        if oldServ != server or oldPort != port:
+            irc.disconnect()
+            irc.connect(server,port)
+        irc.login(nick,user,rname)
     if ev1 == "Commands":
-       commandsWin() 
+        commandsWin() 
+    if ev1 == "About":
+        aboutWin()
     # User wants to exit :(
     if ev1 == sg.WIN_CLOSED or ev1 == "EXIT" or ev1 == "Exit":
         irc.quitC()
