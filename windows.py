@@ -7,17 +7,22 @@ This file contains the functions which create additional windows
 '''
 
 import PySimpleGUI as sg
+
+class EmptyValue(Exception):
+    def __init__(self):
+        self.message = "User Input is required"
+        super().__init__(self.message)
+
 # Window for displaying error messages
 def errorWin(message):
     errorLayout = [[sg.Text(f"{message}")],
-    [sg.Button("Okay",bind_return_key=True)]]
+        [sg.Button("Okay",bind_return_key=True)]]
     errorWin = sg.Window("Error",errorLayout,element_justification="c",finalize=True)
     while True:
         ev3,vals3 = errorWin.read(timeout=10)
         if ev3 == sg.WIN_CLOSED or ev3 == "Okay":
             break
     errorWin.close()
-
 
 # Window for entering login details for a server
 # Returns a tuple containing (server,nick,user,rname)
@@ -85,7 +90,26 @@ def loginWin(serv="",port="",nick="",user="",rname=""):
                 b5.set_focus()
             #elif ev2 == "SERV_Return":
         except EmptyValue:
-            logging.warning("Blank fields on login page")
             errorWin("Please fill out all the fields") 
     loginWin.close()
     return (server,int(port),nick,user,rname)
+
+def commandsWin():
+    comWinLayout = [[sg.Text("Not implemented")],
+        [sg.Button("Okay",bind_return_key=True)]]
+    comWin = sg.Window("Command",comWinLayout,element_justification="c",finalize=True)
+    while True:
+        ev4, vals4 = comWin.read(timeout=10)
+        if ev4 == sg.WIN_CLOSED or ev4 == "Okay":
+            break
+    comWin.close()
+
+def aboutWin():
+    aboutWinLayout = [[sg.Text("Not implemented")],
+    [sg.Button("Okay",bind_return_key=True)]]
+    aboutWin = sg.Window("About",aboutWinLayout,element_justification="c",finalize=True)
+    while True:
+        ev5, vals5 = aboutWin.read(timeout=10)
+        if ev5 == sg.WIN_CLOSED or ev5 == "Okay":
+            break
+    aboutWin.close()
