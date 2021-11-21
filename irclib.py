@@ -208,6 +208,17 @@ class IrcCon(object):
                 # Ignore our own name change
                 if newNick != self.NICK:
                     self.on_user_nick_change(who,newNick)
+            #:talhah!~u@szawf88ssv98q.irc QUIT :Quit: Eating
+            elif line[1] == "QUIT":
+                who = line[0].split("!")
+                hostname = who[1]
+                who = who[0].lstrip(":")
+                if line[2] == ":Quit:":
+                    msg = ' '.join(line[3:])
+                else:
+                    msg = ' '.join(line[2:])
+                    msg.lstrip(":")
+                self.on_user_quit(who,hostname,msg)
             elif line[1] == "311":
                 self.startWhoList = True
                 self.on_whois(line)
@@ -258,7 +269,7 @@ class IrcCon(object):
     def quitC(self,msg=None):
         if not msg:
             msg = self.NICK
-        self.sckt.send(bytes(f"QUIT :{msg}","UTF-8"))
+        self.sckt.send(bytes(f"QUIT :{msg}\r\n","UTF-8"))
 
     # Reconnect to the IRC server
     def reconnect(self):
@@ -291,6 +302,10 @@ class IrcCon(object):
 
     def on_user_part(self,who,channel,hostname):
         pass
+
+    def on_user_quit(self,who,hostname,msg):
+        pass
+    
     # Called on message
     def on_message(self,who,channel,msg):
         pass
@@ -298,7 +313,7 @@ class IrcCon(object):
     def on_whois(self,line):
         pass
 
-    def on_names(self,channel,names):
+    def on_names(self,channel,namesChan):
         pass
 
     def on_user_nick_change(self,who,newNick):
