@@ -79,14 +79,15 @@ class IrcCon(object):
             self.sckt.connect((self.HOST,self.PORT))
             self.connected = True
             self.on_connect()
-            thread = threading.Thread(target=self.recv_loop,args=[self.sckt]) 
-            thread.daemon = True
-            thread.start() 
+            self.thread = threading.Thread(target=self.recv_loop,args=[self.sckt]) 
+            self.thread.daemon = True
+            self.thread.start() 
             return True
         except:
             self.on_error("ConnectionRefusedError")
+            self.connected = False
             return False
-    
+
     def recv_loop(self,con):
         '''
         Receive loop to receive incoming messages
@@ -258,8 +259,21 @@ class IrcCon(object):
         if not msg:
             msg = self.NICK
         self.sckt.send(bytes(f"QUIT :{msg}","UTF-8"))
-    
+
+    # Reconnect to the IRC server
+    def reconnect(self):
+        self.sckt.shutdown(socket.SHUT_RDWR)
+        self.sckt.close()
+        self.sckt = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        self.connected = False
+        self.userDone = False
+        self.connect(self.HOST,self.PORT)
+        self.login(self.NICK,self.USER,self.RNAME)
+
     def on_connect(self):
+        pass
+
+    def on_connection_broken(self):
         pass
 
     def on_error(self,errorType):
