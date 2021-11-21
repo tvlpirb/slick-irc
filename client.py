@@ -214,6 +214,14 @@ def processCommand(win,irc,query):
             irc.reconnect()
             for tab in openTabs[1:]:
                 irc.join(tab)
+        elif command == "query":
+            nick = query[1]
+            openTabs.append(nick)
+            irc.join(nick)
+            create_tab(win,nick)
+            if len(query) > 2:
+                msg = ' '.join(query[2:])
+                sendMsg(win,irc,nick,msg)
         else:
             raise InvalidCommand       
     except InvalidCommand:
@@ -223,7 +231,7 @@ def processCommand(win,irc,query):
         win["msgbox"].update("")
 
 def sendMsg(win,irc,chan,msg):
-    if vals1["chats"] != "info":
+    if chan != "info":
         irc.privmsg(f"{chan}",msg)
         msg = f"{current_time} | {irc.NICK} > " + msg + "\n"
         win[f"{chan}B"].update(msg,append=True)
