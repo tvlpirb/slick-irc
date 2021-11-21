@@ -13,7 +13,7 @@ from irclib import IrcCon
 import PySimpleGUI as sg
 import logging
 import time
-from windows import loginWin,errorWin 
+from windows import loginWin,errorWin,commandsWin
 logging.basicConfig(filename='run.log', filemode='w', format='%(asctime)s - %(levelname)s - %(message)s',datefmt='%d-%b-%y %H:%M:%S')
 
 sg.theme("Topanga")
@@ -43,9 +43,7 @@ class Client(IrcCon):
     def on_error(self,errorType):
         if errorType == "ConnectionRefusedError":
             logging.warning(f"{errorType} Cannot connect to server")
-            errorWin("Cannot connect to server")
-            logging.info("Asking user to enter information again")
-            loginWin(self.HOST,self.PORT,nick,user,rname)
+
         if errorType == "NickInUse":
             self.failedLogin = True
             logging.warning(f"{errorType}")
@@ -93,9 +91,8 @@ class Client(IrcCon):
 def mainLayout():
     # Box to display server info and other information non-specific to channels
     info = [[sg.Multiline(size=(75,15),font=('Helvetica 10'),key="infoB",reroute_stdout=False,autoscroll=True,disabled=True)]]
-    menu = menu_def=['SlickIRC', ['&Exit']],['&Server'],['&Help', ['&Keybindings', '---', '&About']]
-    layout = [[sg.Menu(menu_def, background_color='lightsteelblue',text_color='navy', disabled_text_color='yellow', font='Verdana', pad=(10,10))],
-        [sg.Text("Chat",size=(40,1))],
+    menu = ['SlickIRC', ['&Exit']],['&Server'],['&Help', ['&Commands', '---', '&About']]
+    layout = [[sg.Menu(menu)],
         [sg.TabGroup([[sg.Tab("info",info)]],key="chats",selected_background_color="grey")],
         [sg.Multiline(size=(70, 5), enter_submits=True, key='msgbox', do_not_clear=True),
         sg.Button('SEND', bind_return_key=True,visible=False),
@@ -144,14 +141,15 @@ def processCommand(win,irc,query):
             raise InvalidCommand
         query = query.split()
         currentTab = vals1["chats"]
-        if query[0].lower() == "join":
+        command = query[0].lower()
+        if command == "join":
             channels = query[1:]
             for chan in channels:
                 if chan not in irc.channels:
                     openTabs.append(chan)
                     irc.join(chan)
                     create_tab(win,chan)
-        elif query[0].lower() == "part":
+        elif command == "part":
             channels = query[1:]
             for chan in channels:
                 if chan in irc.channels:
@@ -160,18 +158,27 @@ def processCommand(win,irc,query):
                     irc.part(chan)
                 else:
                     win[f"{currentTab}B"].update("Need to be in channel",append=True)
-        elif query[0].lower() == "whois":
+        elif command == "whois":
             if len(query) == 2:
                 irc.whois(query[1])
-        elif query[0].lower() == "unread":
+        elif command == "unread":
             channels = query[1:]
             for chan in channels:
                 if chan in irc.channels:
                     markUnread(chan)
-        elif query[0].lower() == "nick":
+        elif command == "nick":
             if len(query) == 2:
                 nick = query[1]
                 loggedIn = False
+        elif command == "quit":
+            msg = None
+            if len(query) >= 2:
+                msg = ' '.join(query[1:])
+            irc.quitC(msg)
+        elif command == "reconnect":
+            irc.reconnect()
+            for tab in openTabs[1:]:
+                irc.join(tab)
         else:
             raise InvalidCommand       
     except InvalidCommand:
@@ -215,6 +222,12 @@ while True:
         errorWin("Nickname in use, try a different one!")
         (server,port,nick,user,rname) = loginWin(server,port,nick,user,rname)
         loggedIn = False
+    if not irc.connected:
+        errorWin("Cannot connect to server")
+        logging.info("Asking user to enter information again")
+        (server,port,nick,user,rname) = loginWin(server,port,nick,user,rname)
+        irc.connect(server,port)
+        irc.login(nick,user,rname)
     if ev1 == "SEND":
         query = vals1["msgbox"].rstrip()
         # Ignore bogus empty messages
@@ -227,8 +240,11 @@ while True:
     if vals1["chats"] != "info":
         if vals1["chats"].startswith("*"):
             markRead(vals1["chats"])
+    if ev1 == "Commands":
+       commandsWin() 
     # User wants to exit :(
     if ev1 == sg.WIN_CLOSED or ev1 == "EXIT" or ev1 == "Exit":
+        irc.quitC()
         break
     
 
