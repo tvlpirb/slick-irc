@@ -82,13 +82,25 @@ class Client(IrcCon):
     def on_user_nick_change(self,who,newNick):
         msg = f"{current_time} | {who} is now known as {newNick}\n"
         for chan in names:
-            self.window[f"{chan}B"].update(msg,text_color_for_value="blue",append=True)
-            # Update the users name in the name list
-            namesList = names[chan]
-            namesList.remove(who)
-            namesList.append(newNick)
-            names[chan] = namesList
-            markUnread(chan)
+            if who in names[chan]:
+                self.window[f"{chan}B"].update(msg,text_color_for_value="blue",append=True)
+                # Update the users name in the name list
+                namesList = names[chan]
+                namesList.remove(who)
+                namesList.append(newNick)
+                names[chan] = namesList
+                markUnread(chan)
+    
+    def on_user_quit(self,who,hostname,msg):
+        msg = f"{current_time} | {who} ({hostname}) quit: {msg}\n"
+        for chan in names:
+            if who in names[chan]:
+                self.window[f"{chan}B"].update(msg,text_color_for_value="red",append=True)
+                # Update the users name in the name list
+                namesList = names[chan]
+                namesList.remove(who)
+                names[chan] = namesList
+                markUnread(chan)
 
     def on_whois(self,line):
         line = line + "\n"
