@@ -65,11 +65,30 @@ class Client(IrcCon):
         msg = f"{current_time} | ---> {who} ({hostname}) has joined {channel}\n"
         self.window[f"{channel}B"].update(msg,text_color_for_value="green",append=True)
         markUnread(channel)
+        # Add user to the names list
+        namesList = names[channel]
+        namesList.append(who)
+        names[channel] = namesList
     
     def on_user_part(self,who,channel,hostname):
         msg = f"{current_time} | <--- {who} ({hostname}) has parted {channel}\n"
         self.window[f"{channel}B"].update(msg,text_color_for_value="orange",append=True)        
         markUnread(channel)
+        # Remove the user from the names list
+        namesList = names[channel]
+        namesList.remove(who)
+        names[channel] = namesList
+    
+    def on_user_nick_change(self,who,newNick):
+        msg = f"{current_time} | {who} is now known as {newNick}\n"
+        for chan in names:
+            self.window[f"{chan}B"].update(msg,text_color_for_value="blue",append=True)
+            # Update the users name in the name list
+            namesList = names[chan]
+            namesList.remove(who)
+            namesList.append(newNick)
+            names[chan] = namesList
+            markUnread(chan)
 
     def on_whois(self,line):
         line = line + "\n"
@@ -85,7 +104,11 @@ class Client(IrcCon):
         # limitation. TODO Make a PR or github issue one day to fix this
         line = line + "\n"
         self.window["infoB"].update(line,append=True)
-
+    
+    def on_names(self,channel,namesChan):
+        # Add our own name
+        namesChan.insert(0,self.NICK)
+        names[channel] = namesChan
 
 # Returns the main window layout
 def mainLayout():
@@ -124,7 +147,7 @@ def markUnread(tab):
     tabgroup.tab(i,text=title)
 
 def markRead(tab):
-    temp = tab.rstrip("*")
+    temp = tab.lstrip("*")
     tabgroup = mainWin["chats"].Widget
     for i in range(len(openTabs)):
         if openTabs[i] == temp:
@@ -208,6 +231,7 @@ failedLogin = False
 # All the tabs seen so far
 tabHist = ["info"]
 openTabs = ["info"]
+names = dict()
 while True:
     # Event and values
     ev1, vals1 = mainWin.read(timeout=1)
