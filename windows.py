@@ -29,10 +29,11 @@ def errorWin(message):
 def loginWin(serv="",port="",nick="",user="",rname=""):
     # Default to empty string if not specified
     (server,port,nick,user,rname) = (serv,port,nick,user,rname)
+    ssl = False
     # Window layout
     loginLayout = [
         [sg.Text("Server:"),sg.Multiline(size=(17,1),default_text=server,enter_submits=False, key='SERV', do_not_clear=True),
-        sg.Text("Port:"),sg.Multiline(size=(6,1),default_text=port,enter_submits=False, key='PORT', do_not_clear=True)],
+        sg.Text("Port:"),sg.Multiline(size=(6,1),default_text=port,enter_submits=False, key='PORT', do_not_clear=True),sg.Checkbox("SSL",default=False,key="SSL")],
         [sg.Text("Alias/Nick:"),sg.Multiline(size=(25, 1), default_text=nick,enter_submits=False, key='NICK', do_not_clear=True)],
         [sg.Text("Username:"),sg.Multiline(size=(25, 1), default_text=user, enter_submits=True, key='USER', do_not_clear=True)],
         [sg.Text("Realname: (Optional)"),sg.Multiline(size=(25, 1), default_text=rname, enter_submits=True, key='RNAME', do_not_clear=True)],
@@ -52,6 +53,7 @@ def loginWin(serv="",port="",nick="",user="",rname=""):
         try:
             if ev2 == sg.WIN_CLOSED or ev2 == "CONNECT":
                 rname = loginWin["RNAME"].get()
+                ssl = vals2["SSL"]
                 break
             if ev2 == "SERV_Return":
                 server = loginWin["SERV"].get()
@@ -92,7 +94,7 @@ def loginWin(serv="",port="",nick="",user="",rname=""):
         except EmptyValue:
             errorWin("Please fill out all the fields") 
     loginWin.close()
-    return (server,int(port),nick,user,rname)
+    return (server,int(port),nick,user,rname,ssl)
 
 def commandsWin():
     comWinLayout = [[sg.Text("Not implemented")],
