@@ -4,6 +4,7 @@
 import socket
 import threading
 from select import select
+import ssl
 
 class IrcCon(object):
     '''
@@ -50,7 +51,7 @@ class IrcCon(object):
         self.userDone = False
         self.failedLogin = False
 
-    def connect(self,HOST=None,PORT=None):
+    def connect(self,HOST=None,PORT=None,SSL=False):
         '''
         Connects to the IRC server, if sucessful starts receive loop in a
         thread.
@@ -76,6 +77,9 @@ class IrcCon(object):
         if PORT != self.PORT:
             self.PORT = PORT
         try:
+            if SSL:
+                self.ctx = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
+                self.sckt = self.ctx.wrap_socket(self.sckt)
             self.sckt.connect((self.HOST,self.PORT))
             self.connected = True
             self.on_connect()
@@ -186,10 +190,12 @@ class IrcCon(object):
                     self.on_error("SSLRequired")
             elif line[1] == "JOIN":
                 #:talhah!~u@szawf88ssv98q.irc JOIN #test
+                #:talhahtest!~sorryspam@86.36.37.201 JOIN :#helpdesk
                 who = line[0].split("!")
                 hostname = who[1]
                 who = who[0].lstrip(":")
                 channel = line[2]
+                channel = channel.lstrip(":")
                 self.on_user_join(who,channel,hostname)
             elif line[1] == "PART":
                 #:talhah!~u@szawf88ssv98q.irc PART #test
@@ -197,6 +203,7 @@ class IrcCon(object):
                 hostname = who[1]
                 who = who[0].lstrip(":")
                 channel = line[2]
+                channel = channel.lstrip(":")
                 self.on_user_part(who,channel,hostname)
                 #:talhah.test 311 test talhah ~u szawf88ssv98q.irc * talhah
             elif line[1] == "NICK":
@@ -227,6 +234,7 @@ class IrcCon(object):
             elif line[1] == "318":
                 self.startWhoList = False
                 #:talhah.test 353 talhah = #test :test talhah foo
+                #:town.tilde.chat 353 talhahahah = #helpdesk :hedy zce1
             elif line[1] == "353":
                 channel = line[4]
                 names = line[6:]
