@@ -16,7 +16,7 @@ import time
 from windows import loginWin,errorWin,commandsWin,aboutWin
 logging.basicConfig(filename='run.log', filemode='w', format='%(asctime)s - %(levelname)s - %(message)s',datefmt='%d-%b-%y %H:%M:%S')
 
-sg.theme("Topanga")
+#sg.theme("Topanga")
 #### CUSTOM EXCEPTIONS ####
 class EmptyValue(Exception):
     def __init__(self):
@@ -214,7 +214,7 @@ def processCommand(win,irc,query):
             irc.reconnect()
             for tab in openTabs[1:]:
                 irc.join(tab)
-        elif command == "query":
+        elif command == "query" or command == "msg":
             nick = query[1]
             openTabs.append(nick)
             irc.join(nick)
@@ -239,12 +239,12 @@ def sendMsg(win,irc,chan,msg):
 
 t = time.localtime()
 # Initial login window
-(server,port,nick,user,rname) = loginWin("127.0.0.1","6667")
+(server,port,nick,user,rname,ssl) = loginWin("127.0.0.1","6667")
 # Initialize main window thereafter
 mainWin = sg.Window("Slick IRC",mainLayout(),font=("Helvetica","13"),default_button_element_size=(8,2),finalize=False)
 # Initialize irc client and connect
 irc = Client(mainWin)
-irc.connect(server,port)
+irc.connect(server,port,ssl)
 loggedIn = False
 failedLogin = False
 
@@ -264,13 +264,13 @@ while True:
     # We failed login, darn it, try again and display error
     if irc.failedLogin:
         errorWin("Nickname in use, try a different one!")
-        (server,port,nick,user,rname) = loginWin(server,port,nick,user,rname)
+        (server,port,nick,user,rname,ssl) = loginWin(server,port,nick,user,rname)
         loggedIn = False
     if not irc.connected:
         errorWin("Cannot connect to server")
         logging.info("Asking user to enter information again")
-        (server,port,nick,user,rname) = loginWin(server,port,nick,user,rname)
-        irc.connect(server,port)
+        (server,port,nick,user,rname,ssl) = loginWin(server,port,nick,user,rname)
+        irc.connect(server,port,ssl)
         irc.login(nick,user,rname)
     if ev1 == "SEND":
         query = vals1["msgbox"].rstrip()
@@ -289,7 +289,7 @@ while True:
         (server,port,nick,user,rname) = loginWin(server,port,nick,user,rname)
         if oldServ != server or oldPort != port:
             irc.disconnect()
-            irc.connect(server,port)
+            irc.connect(server,port,ssl)
         irc.login(nick,user,rname)
     if ev1 == "Commands":
         commandsWin() 
