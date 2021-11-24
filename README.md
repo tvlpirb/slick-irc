@@ -9,8 +9,7 @@ A simple IRC client written in python for my term project
 1. Simply open the client.py file in the terminal as follows ```python client.py```
 
 # How to use Slick IRC
-At the moment you use the standard IRC commands, you can join and part for now.
-To private message type /join NICK and you're good to go.
+Check out the commands.md file
 
 # Development
 1. Download an IRC server, preferably [Ergo](https://github.com/ergochat/ergo) and configure it to
