@@ -190,24 +190,27 @@ class IrcCon(object):
                     self.on_server_shutdown()
                 if "You must use TLS/SSL" in notice:
                     self.on_error("SSLRequired")
+            # Join message in format:
+            # :nick!user@hostname JOIN chan
+            # Note: it can also be :chan
             elif line[1] == "JOIN":
-                #:talhah!~u@szawf88ssv98q.irc JOIN #test
-                #:talhahtest!~sorryspam@86.36.37.201 JOIN :#helpdesk
                 who = line[0].split("!")
                 hostname = who[1]
                 who = who[0].lstrip(":")
                 channel = line[2]
                 channel = channel.lstrip(":")
                 self.on_user_join(who,channel,hostname)
+            # Part message in format:
+            # :nick!user@hostname PART chan
             elif line[1] == "PART":
-                #:talhah!~u@szawf88ssv98q.irc PART #test
                 who = line[0].split("!")
                 hostname = who[1]
                 who = who[0].lstrip(":")
                 channel = line[2]
                 channel = channel.lstrip(":")
                 self.on_user_part(who,channel,hostname)
-                #:talhah.test 311 test talhah ~u szawf88ssv98q.irc * talhah
+            # Nick message in format:
+            # :nick!user@hostname NICK newnick
             elif line[1] == "NICK":
                 #:talhah!~u@szawf88ssv98q.irc NICK test1
                 who = line[0].split("!")
@@ -217,7 +220,8 @@ class IrcCon(object):
                 # Ignore our own name change
                 if newNick != self.NICK:
                     self.on_user_nick_change(who,newNick)
-            #:talhah!~u@szawf88ssv98q.irc QUIT :Quit: Eating
+            # Quit message in format:
+            #:nick!user@hostname QUIT :Quit: Message
             elif line[1] == "QUIT":
                 who = line[0].split("!")
                 hostname = who[1]
@@ -233,24 +237,39 @@ class IrcCon(object):
                 self.on_whois(line)
             elif self.startWhoList:
                 self.on_whois(line)
-            # end of whois list
+            # End of whois list message in format:
+            # :host 318
             elif line[1] == "318":
                 self.startWhoList = False
-                #:talhah.test 353 talhah = #test :test talhah foo
-                #:town.tilde.chat 353 talhahahah = #helpdesk :hedy zce1
-            # end of names list 366
+            # End of names list message in format:
+            # :host 366 nick chan :End of /NAMES list.
             elif "366" in line:
                 self.startNames = False
                 pass
+            # Names list message for a channel in format:
+            # :host 353 nick = #chan :names
+            # It's important to note the list may come as multiple 353 messages
+            # so we need to build list and only stop once we get 366
             elif line[1] == "353" or self.startNames:
                 if not self.startNames:
                     self.namesChan = line[4]
-                #print("HERE")zho obcecado librarianmage anon Ogmios fossy anelki demure low-
                 self.startNames = True
                 names = line[5:]
                 if line[1] != "353":
                     names = line
                 self.on_names(self.namesChan, names)
+            # Topic message for a channel without topic:
+            # :host 331 nick chan :No topic is set
+            elif line[1] == "331":
+                chan = line[3]
+                self.on_topic(chan,"No topic is set")
+            # Topic message for a channel in format:
+            # :host 332 nick chan :topic
+            elif line[1] == "332":
+                chan = line[3]
+                topic = ' '.join(line[4:])
+                topic = topic[1:]
+                self.on_topic(chan,topic)
             else:
                 line = ' '.join(line)
                 self.unknown_message(line) 
@@ -347,6 +366,10 @@ class IrcCon(object):
         pass
 
     def on_names(self,channel,namesChan):
+        pass
+
+    def on_topic(self,chan,topic):
+        print(topic)
         pass
 
     def on_user_nick_change(self,who,newNick):
