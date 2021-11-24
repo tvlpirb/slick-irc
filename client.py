@@ -228,6 +228,7 @@ def processCommand(win,irc,query):
             if len(query) >= 2:
                 msg = ' '.join(query[1:])
             irc.quitC(msg)
+            quit()
         elif command == "reconnect":
             irc.reconnect()
             for tab in openTabs[1:]:
@@ -258,7 +259,11 @@ def processCommand(win,irc,query):
 def sendMsg(win,irc,chan,msg):
     if chan != "info":
         irc.privmsg(f"{chan}",msg)
-        msg = f"{current_time} | {irc.NICK} > " + msg + "\n"
+        ms = f"{current_time} | "#{irc.NICK} > " + msg + "\n"
+        win[f"{chan}B"].update(ms,append=True)
+        ms = f"{irc.NICK} "
+        win[f"{chan}B"].update(ms,text_color_for_value="purple",append=True)
+        msg = "> " + msg + "\n"
         win[f"{chan}B"].update(msg,append=True)
     win["msgbox"].update("")
 
