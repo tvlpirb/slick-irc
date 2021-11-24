@@ -47,6 +47,7 @@ class IrcCon(object):
         self.connected = False
         self.channels = set()
         self.startWhoList = False
+        self.startNames = False
         self.names = dict()
         self.userDone = False
         self.failedLogin = False
@@ -179,7 +180,8 @@ class IrcCon(object):
                 who = who[0].lstrip(":")
                 channel = line[2]
                 msg = ' '.join(line[3:])
-                msg = msg.lstrip(":")
+                #msg = msg.lstrip(":")
+                msg = msg[1:]
                 self.on_message(who,channel,msg)
             elif line[1] == "NOTICE":
                 notice = ' '.join(line[3:])
@@ -231,19 +233,24 @@ class IrcCon(object):
                 self.on_whois(line)
             elif self.startWhoList:
                 self.on_whois(line)
+            # end of whois list
             elif line[1] == "318":
                 self.startWhoList = False
                 #:talhah.test 353 talhah = #test :test talhah foo
                 #:town.tilde.chat 353 talhahahah = #helpdesk :hedy zce1
-            elif line[1] == "353":
-                channel = line[4]
-                names = line[6:]
-                if len(line) == 5:
-                    names = []
-                self.on_names(channel, names)
-            # Ignore end of whois list 366
-            elif line[1] == "366":
+            # end of names list 366
+            elif "366" in line:
+                self.startNames = False
                 pass
+            elif line[1] == "353" or self.startNames:
+                if not self.startNames:
+                    self.namesChan = line[4]
+                #print("HERE")zho obcecado librarianmage anon Ogmios fossy anelki demure low-
+                self.startNames = True
+                names = line[5:]
+                if line[1] != "353":
+                    names = line
+                self.on_names(self.namesChan, names)
             else:
                 line = ' '.join(line)
                 self.unknown_message(line) 
@@ -296,6 +303,24 @@ class IrcCon(object):
         self.userDone = False
         self.connected = False
 
+    def nickserv(self,action,data):
+        try:
+            if action == "REGISTER":
+                password = data[0]
+                email = data[1]
+                msg = f"NICKSERV REGISTER {password} {email}\r\n"
+            if action == "IDENTIFY":
+                password = data[0]
+                msg = f"NICKSERV IDENTIFY {password}\r\n"
+            if action == "LOGOUT":
+                msg = f"NICKSERV LOGOUT\r\n"
+            if action == "DROP":
+                nick = data[0]
+                msg = f"NICKSERV DROP {nick}\r\n"
+            self.sckt.send(bytes(msg,"UTF-8"))
+        # Fail silently for index errors
+        except:
+            print("IndexError at line 323")
     def on_connect(self):
         pass
 

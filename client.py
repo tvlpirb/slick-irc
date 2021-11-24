@@ -68,7 +68,9 @@ class Client(IrcCon):
         # Add user to the names list
         namesList = names[channel]
         namesList.append(who)
+        namesList.sort()
         names[channel] = namesList
+        self.window[f"{channel}L"].update(values=names[channel])
     
     def on_user_part(self,who,channel,hostname):
         msg = f"{current_time} | <--- {who} ({hostname}) has parted {channel}\n"
@@ -78,6 +80,7 @@ class Client(IrcCon):
         namesList = names[channel]
         namesList.remove(who)
         names[channel] = namesList
+        self.window[f"{channel}L"].update(values=names[channel])
     
     def on_user_nick_change(self,who,newNick):
         msg = f"{current_time} | {who} is now known as {newNick}\n"
@@ -88,8 +91,10 @@ class Client(IrcCon):
                 namesList = names[chan]
                 namesList.remove(who)
                 namesList.append(newNick)
+                namesList.sort()
                 names[chan] = namesList
                 markUnread(chan)
+                self.window[f"{chan}L"].update(values=names[chan])
     
     def on_user_quit(self,who,hostname,msg):
         msg = f"{current_time} | {who} ({hostname}) quit: {msg}\n"
@@ -101,6 +106,7 @@ class Client(IrcCon):
                 namesList.remove(who)
                 names[chan] = namesList
                 markUnread(chan)
+                self.window[f"{chan}L"].update(values=names[chan])
 
     def on_whois(self,line):
         line = line + "\n"
@@ -118,9 +124,20 @@ class Client(IrcCon):
         self.window["infoB"].update(line,append=True)
     
     def on_names(self,channel,namesChan):
+        namesChan[0] = namesChan[0].lstrip(":")
+        #print("NAMES",channel,namesChan)
+        if channel not in names:
+            names[channel] = []
+        #if self.NICK not in namesChan:
+        #    namesChan.insert(0,self.NICK)
         # Add our own name
-        namesChan.insert(0,self.NICK)
-        names[channel] = namesChan
+        names[channel] = names[channel] + namesChan
+        namelist = names[channel]
+        namelist.sort()
+        names[channel] = namelist
+        time.sleep(0.5)
+        self.window[f"{channel}L"].update(values=names[channel])
+        #print(names[channel])
 
 # Returns the main window layout
 def mainLayout():
@@ -129,9 +146,9 @@ def mainLayout():
     menu = ['SlickIRC', ['&Exit']],['&Server',['Server settings']],['&Help', ['&Commands', '---', '&About']]
     layout = [[sg.Menu(menu)],
         [sg.TabGroup([[sg.Tab("info",info)]],key="chats",selected_background_color="grey")],
-        [sg.Multiline(size=(70, 5), enter_submits=True, key='msgbox', do_not_clear=True),
+        [sg.Multiline(size=(60, 2), enter_submits=True, key='msgbox', do_not_clear=True),
         sg.Button('SEND', bind_return_key=True,visible=False),
-        sg.Button('EXIT')
+        sg.Button('EXIT',visible=False)
         ]]
     return layout
 
@@ -139,7 +156,7 @@ def create_tab(win,channel):
     if channel in tabHist:
         win[f"{channel}"].update(visible=True)
     else:
-        element = [[sg.Multiline(size=(75, 15), font=('Helvetica 10'),key=f"{channel}B",autoscroll=True,disabled=True)]]
+        element = [[sg.Multiline(size=(75, 15), font=('Helvetica 10'),key=f"{channel}B",autoscroll=True,disabled=True),sg.Listbox(values=[""],key=f"{channel}L",size=(10,10))]]
         tab = sg.Tab(f"{channel}",element,key=channel)
         win["chats"].add_tab(tab)
         tabHist.append(channel)
@@ -191,6 +208,7 @@ def processCommand(win,irc,query):
                     openTabs.remove(chan)
                     delete_tab(win,chan)
                     irc.part(chan)
+                    names[chan] = []
                 else:
                     win[f"{currentTab}B"].update("Need to be in channel",append=True)
         elif command == "whois":
@@ -216,12 +234,19 @@ def processCommand(win,irc,query):
                 irc.join(tab)
         elif command == "query" or command == "msg":
             nick = query[1]
-            openTabs.append(nick)
-            irc.join(nick)
-            create_tab(win,nick)
-            if len(query) > 2:
-                msg = ' '.join(query[2:])
-                sendMsg(win,irc,nick,msg)
+            if nick == "NickServ":
+                # Make sure that there's enough params
+                if len(query) > 2:
+                    irc.nickserv(query[2],query[3:])
+                else:
+                    raise InvalidCommand
+            else:
+                openTabs.append(nick)
+                irc.join(nick)
+                create_tab(win,nick)
+                if len(query) > 2:
+                    msg = ' '.join(query[2:])
+                    sendMsg(win,irc,nick,msg)
         else:
             raise InvalidCommand       
     except InvalidCommand:
