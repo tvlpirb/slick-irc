@@ -308,6 +308,12 @@ def processCommand(win,irc,query):
                 if len(query) > 2:
                     msg = ' '.join(query[2:])
                     sendMsg(win,irc,nick,msg)
+        elif command == "save":
+            for tab in tabHist:
+                f = open(f"{tab}.txt","w+")
+                tabLog = mainWin[f"{tab}B"].get()
+                f.write(tabLog)
+                f.close()
         else:
             raise InvalidCommand       
     except InvalidCommand:
