@@ -7,6 +7,7 @@ This file contains the functions which create additional windows
 '''
 
 import PySimpleGUI as sg
+import webbrowser
 
 class EmptyValue(Exception):
     def __init__(self):
@@ -33,7 +34,7 @@ def loginWin(serv="",port="",nick="",user="",rname=""):
     # Window layout
     loginLayout = [
         [sg.Text("Server:"),sg.Multiline(size=(17,1),default_text=server,enter_submits=False, key='SERV', do_not_clear=True),
-        sg.Text("Port:"),sg.Multiline(size=(6,1),default_text=port,enter_submits=False, key='PORT', do_not_clear=True),sg.Checkbox("SSL",default=False,key="SSL")],
+        sg.Text("Port:"),sg.Multiline(size=(6,1),default_text=port,enter_submits=False, key='PORT', do_not_clear=True),sg.Checkbox("SSL",default=True,key="SSL")],
         [sg.Text("Alias/Nick:"),sg.Multiline(size=(25, 1), default_text=nick,enter_submits=False, key='NICK', do_not_clear=True)],
         [sg.Text("Username:"),sg.Multiline(size=(25, 1), default_text=user, enter_submits=True, key='USER', do_not_clear=True)],
         [sg.Text("Realname: (Optional)"),sg.Multiline(size=(25, 1), default_text=rname, enter_submits=True, key='RNAME', do_not_clear=True)],
@@ -97,13 +98,17 @@ def loginWin(serv="",port="",nick="",user="",rname=""):
     return (server,int(port),nick,user,rname,ssl)
 
 def commandsWin():
-    comWinLayout = [[sg.Text("Not implemented")],
+    font = ("Courier New",16,"underline")
+    comWinLayout = [[sg.Text("Online guide sheet, click me",enable_events=True,font=font,key="link")],
         [sg.Button("Okay",bind_return_key=True)]]
     comWin = sg.Window("Command",comWinLayout,element_justification="c",finalize=True)
     while True:
         ev4, vals4 = comWin.read(timeout=10)
         if ev4 == sg.WIN_CLOSED or ev4 == "Okay":
             break
+        elif ev4 == "link":
+            webbrowser.open("https://github.com/tvlpirb/slick-irc/blob/master/commands.md")
+            comWin["link"].update("Opening in browser")
     comWin.close()
 
 def aboutWin():
