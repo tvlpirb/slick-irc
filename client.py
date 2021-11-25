@@ -47,8 +47,6 @@ class Client(IrcCon):
         if errorType == "NickInUse":
             self.failedLogin = True
             logging.warning(f"{errorType}")
-            #(server,host,port,nick,user,rname) = loginWin(self.HOST,self.PORT,nick,user,rname)
-            #self.login(nick,user,rname)
     
     def on_message(self,who,channel,msg):
         msg = f"{current_time} | {who} > {msg}"
@@ -152,6 +150,8 @@ def mainLayout():
         ]]
     return layout
 
+# Creates a new tab, we keep a record of tabs created, so if a this tab exists 
+# in hist then we just unhide it 
 def create_tab(win,channel):
     if channel in tabHist:
         win[f"{channel}"].update(visible=True)
@@ -161,20 +161,29 @@ def create_tab(win,channel):
         win["chats"].add_tab(tab)
         tabHist.append(channel)
 
+# Deletes a tab, we don't truly delete it but just hide it. I can delete a tab
+# but unable to delete the contents related to it and we have issues if we need to
+# recreate this tab. Hiding it isn't too bad of a tradeoff and history is preserved
 def delete_tab(win,channel):
     win[f"{channel}"].update(visible=False)
 
+# Add an asterisk infront of a tabs name to indicate there is an unread message
 def markUnread(tab):
     tabgroup = mainWin["chats"].Widget
+    # Get the index of the tab, we add to openTabs elsewhere so we can get index
+    # over here
     for i in range(len(openTabs)):
         if openTabs[i] == tab:
             break
+    # Get the tab object
     tab = mainWin[f"{tab}"]
     title = tab.Title
+    # Only if it isn't already unread append an asterisk
     if not title.startswith("*"):
         title = "*" + title
     tabgroup.tab(i,text=title)
 
+# Mark a tab as read by removing the asterisk at the start of its name
 def markRead(tab):
     temp = tab.lstrip("*")
     tabgroup = mainWin["chats"].Widget
@@ -184,6 +193,7 @@ def markRead(tab):
     title = openTabs[i]
     tabgroup.tab(i,text=title)
 
+# Process IRC commands such as /join etc.
 def processCommand(win,irc,query):
     global nick
     global loggedIn
@@ -256,15 +266,19 @@ def processCommand(win,irc,query):
     finally:
         win["msgbox"].update("")
 
+# Send a message to a channel or private message
+# We break the string down to color the users own nick for better readability
 def sendMsg(win,irc,chan,msg):
+    # We don't send messages in the info channel
     if chan != "info":
         irc.privmsg(f"{chan}",msg)
-        ms = f"{current_time} | "#{irc.NICK} > " + msg + "\n"
+        ms = f"{current_time} | "
         win[f"{chan}B"].update(ms,append=True)
         ms = f"{irc.NICK} "
         win[f"{chan}B"].update(ms,text_color_for_value="purple",append=True)
         msg = "> " + msg + "\n"
         win[f"{chan}B"].update(msg,append=True)
+    # Clear message box
     win["msgbox"].update("")
 
 t = time.localtime()
