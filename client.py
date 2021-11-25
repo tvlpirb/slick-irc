@@ -16,8 +16,13 @@ import time
 from colorhash import ColorHash as chash
 from windows import loginWin,errorWin,commandsWin,aboutWin
 logging.basicConfig(filename='run.log', filemode='w', format='%(asctime)s - %(levelname)s - %(message)s',datefmt='%d-%b-%y %H:%M:%S')
+from sys import platform
 
-#sg.theme("Topanga")
+if platform == "darwin" or platform == "win32":
+    print("\033[93mUnsupported Operating System, this program only works on Linux\033[0m")
+    raise OSError
+
+sg.theme("SystemDefault")
 #### CUSTOM EXCEPTIONS ####
 class EmptyValue(Exception):
     def __init__(self):
@@ -156,9 +161,9 @@ class Client(IrcCon):
     def unknown_message(self,line):
         # This used to "print" to infoB box which had all console output rerouted to it
         # that would apparently lead to a race condition when printing too fast? 
-        # and lead to a seg fault error, hooray I guess!
+        # and lead to a seg fault error, fixed now so hooray I guess!
         # It is important to note that pysimplegui was overriding the builtin print
-        # so I'm talking about that print function. It wasn't transparent that it was
+        # so I'm talking about that "print" function. It wasn't transparent that it was
         # overriding the default one and the bug may lie therein or it's some sort of 
         # limitation. TODO Make a PR or github issue one day to fix this
         line = f"{current_time} | " + line + "\n"
@@ -173,8 +178,6 @@ class Client(IrcCon):
         #print("NAMES",channel,namesChan)
         if channel not in names:
             names[channel] = []
-        #if self.NICK not in namesChan:
-        #    namesChan.insert(0,self.NICK)
         # Add our own name
         names[channel] = names[channel] + namesChan
         namelist = names[channel]
@@ -182,7 +185,6 @@ class Client(IrcCon):
         names[channel] = namelist
         time.sleep(0.5)
         self.window[f"{channel}L"].update(values=names[channel])
-        #print(names[channel])
 
 # Returns the main window layout
 def mainLayout():
