@@ -13,6 +13,7 @@ from irclib import IrcCon
 import PySimpleGUI as sg
 import logging
 import time
+from colorhash import ColorHash as chash
 from windows import loginWin,errorWin,commandsWin,aboutWin
 logging.basicConfig(filename='run.log', filemode='w', format='%(asctime)s - %(levelname)s - %(message)s',datefmt='%d-%b-%y %H:%M:%S')
 
@@ -49,13 +50,19 @@ class Client(IrcCon):
             logging.warning(f"{errorType}")
     
     def on_message(self,who,channel,msg):
-        msg = f"{current_time} | {who} > {msg}"
+        #msg = f"{current_time} | {who} > {msg}"
         if channel == self.NICK:
             channel = who
         if channel not in self.channels:
             create_tab(self.window,channel)
             openTabs.append(channel)
             self.channels.add(channel)
+        ms = f"{current_time} | "
+        self.window[f"{channel}B"].update(ms,append=True)
+        ms = f"{who} "
+        color = chash(f"{who}").hex
+        self.window[f"{channel}B"].update(ms,text_color_for_value=color,append=True)
+        msg = f"> {msg}"
         self.window[f"{channel}B"].update(msg + "\n",append=True)
         markUnread(channel)
 
