@@ -161,9 +161,13 @@ class Client(IrcCon):
         # so I'm talking about that print function. It wasn't transparent that it was
         # overriding the default one and the bug may lie therein or it's some sort of 
         # limitation. TODO Make a PR or github issue one day to fix this
-        line = line + "\n"
+        line = f"{current_time} | " + line + "\n"
         self.window["infoB"].update(line,append=True)
     
+    def on_nickserv(self,msg):
+        msg = f"{current_time} | " + "NickServ " + msg + "\n"
+        self.window["infoB"].update(msg,text_color_for_value="dark red",font_for_value="Helvetica 10 bold",append=True)
+        
     def on_names(self,channel,namesChan):
         namesChan[0] = namesChan[0].lstrip(":")
         #print("NAMES",channel,namesChan)
@@ -329,9 +333,9 @@ def sendMsg(win,irc,chan,msg):
 
 t = time.localtime()
 # Initial login window
-(server,port,nick,user,rname,ssl) = loginWin("127.0.0.1","6667")
+(server,port,nick,user,rname,ssl) = loginWin("irc.tilde.chat","6697")
 # Initialize main window thereafter
-mainWin = sg.Window("Slick IRC",mainLayout(),font=("Helvetica","13"),default_button_element_size=(8,2),finalize=False)
+mainWin = sg.Window("Slick IRC",mainLayout(),font=("Helvetica","13"),default_button_element_size=(8,2),finalize=True)
 # Initialize irc client and connect
 irc = Client(mainWin)
 irc.connect(server,port,ssl)
