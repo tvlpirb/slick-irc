@@ -107,7 +107,7 @@ def commandsWin():
     comWin.close()
 
 def aboutWin():
-    aboutWinLayout = [[sg.Text("Not implemented")],
+    aboutWinLayout = [[sg.Text("Slick IRC is a simple and easy to use Internet Relay Chat client.\n\nIt was developed for my term project, 112@cmuq and \nmost likely will not see any further development.\n\nDeveloped by Talhah Peerbhai (hello@talhah.tech)\n\nVersion: 1.0\n\nLast update: 2021-11-24\n")],
     [sg.Button("Okay",bind_return_key=True)]]
     aboutWin = sg.Window("About",aboutWinLayout,element_justification="c",finalize=True)
     while True:
