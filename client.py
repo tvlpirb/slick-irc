@@ -83,7 +83,14 @@ class Client(IrcCon):
         markUnread(channel)
         # Remove the user from the names list
         namesList = names[channel]
-        namesList.remove(who)
+        if who in namesList:
+            namesList.remove(who)
+        elif f"@{who}" in namesList:
+            namesList.remove(f"@{who}")
+        elif f"~{who}" in namesList:
+            namesList.remove(f"~{who}")
+        elif f"+{who}" in namesList:
+            namesList.remove(f"+{who}")
         names[channel] = namesList
         self.window[f"{channel}L"].update(values=names[channel])
     
@@ -94,7 +101,19 @@ class Client(IrcCon):
                 self.window[f"{chan}B"].update(msg,text_color_for_value="blue",append=True)
                 # Update the users name in the name list
                 namesList = names[chan]
-                namesList.remove(who)
+                # handle nick changes when +,~ @ in front of name, we need to preserve
+                # the leading inidicator
+                if who in namesList:
+                    namesList.remove(who)
+                elif f"@{who}" in namesList:
+                    namesList.remove(f"@{who}")
+                    newNick = "@" + newNick
+                elif f"~{who}" in namesList:
+                    namesList.remove(f"~{who}")
+                    newNick = "~" + newNick
+                elif f"+{who}" in namesList:
+                    namesList.remove(f"+{who}")
+                    newNick = "+" + newNick
                 namesList.append(newNick)
                 namesList.sort()
                 names[chan] = namesList
@@ -104,11 +123,25 @@ class Client(IrcCon):
     def on_user_quit(self,who,hostname,msg):
         msg = f"{current_time} | {who} ({hostname}) quit: {msg}\n"
         for chan in names:
-            if who in names[chan]:
-                self.window[f"{chan}B"].update(msg,text_color_for_value="red",append=True)
-                # Update the users name in the name list
-                namesList = names[chan]
+            inChan = False
+            # Update the users name in the name list
+            namesList = names[chan]
+            # A name may have a leading +,~ @ so we need to appropriately remove
+            # user from the names list
+            if who in namesList:
                 namesList.remove(who)
+                inChan = True
+            elif f"@{who}" in namesList:
+                namesList.remove(f"@{who}")
+                inChan = True
+            elif f"~{who}" in namesList:
+                namesList.remove(f"~{who}")
+                inChan = True
+            elif f"+{who}" in namesList:
+                namesList.remove(f"+{who}")
+                inChan = True
+            if inChan:
+                self.window[f"{chan}B"].update(msg,text_color_for_value="red",append=True)
                 names[chan] = namesList
                 markUnread(chan)
                 self.window[f"{chan}L"].update(values=names[chan])
@@ -337,7 +370,7 @@ while True:
             markRead(vals1["chats"])
     if ev1 == "Server settings":
         (oldServ,oldPort) = (server,port)
-        (server,port,nick,user,rname) = loginWin(server,port,nick,user,rname)
+        (server,port,nick,user,rname,ssl) = loginWin(server,port,nick,user,rname)
         if oldServ != server or oldPort != port:
             irc.disconnect()
             irc.connect(server,port,ssl)
