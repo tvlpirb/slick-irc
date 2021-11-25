@@ -13,6 +13,7 @@ class IrcCon(object):
         https://datatracker.ietf.org/doc/html/rfc2812 (2000) # Core
         https://datatracker.ietf.org/doc/html/rfc7194 (2014)
         https://ircv3.net/irc/ (present) IRCv3 spec
+        https://www.alien.net.au/irc/irc2numerics.html # Numeric replies
     
     Methods:
         connect(HOST,PORT)
@@ -159,23 +160,27 @@ class IrcCon(object):
             # Handle pinging
             if line[0] == "PING":
                 self.sckt.send(bytes(f"PONG {line[1]}\r\n","UTF-8"))
+            # Ignore things such as 
+            # :test3!~u@szawf88ssv98q.irc JOIN #test
             elif self.NICK + "!" in line[0]:
                 # Ignore things such as
-                # :test3!~u@szawf88ssv98q.irc JOIN #test
                 pass
+            # Nick non existent in format:
+            # :host 401 NICK ATTEMPTEDNICK :No such nick
             elif line[1] == "401":
-                # :server 401 NICK INVALIDNICK :No such nick
                 pass
+            # TODO Invalid channel
+            # Channel non existent in format:
+            # :host 403 NICK CHAN :No such channel
             elif line[1] == "403":
-                # :server 403 NICK INVALIDCHAN :N such channel
                 pass
+            # Nickname in use, format:
+            # :host 443 * AttemptedNICK :Nickname is already in use
             elif line[1] == "433":
                 self.on_error("NickInUse")
-                # :server 433 * AttemptedNICK :Nickname is already in use
-                pass
+            # Private and channel message in format:
+            # :nick!~username@hostname PRIVMSG NICK/CHAN :msg
             elif line[1] == "PRIVMSG":
-                # :test1!~u@szawf88ssv98q.irc PRIVMSG talhah :hello
-                # :test2!~u@szawf88ssv98q.irc PRIVMSG #test :hello
                 who = line[0].split("!")
                 who = who[0].lstrip(":")
                 channel = line[2]
@@ -183,13 +188,23 @@ class IrcCon(object):
                 #msg = msg.lstrip(":")
                 msg = msg[1:]
                 self.on_message(who,channel,msg)
+            elif "NickServ" in line[0]:
+                line = line[3:]
+                line = ' '.join(line)
+                line = line[1:]
+                self.on_nickserv(line)
+                #self.unknown_message(line)
+            # TODO Finish notices
             elif line[1] == "NOTICE":
                 notice = ' '.join(line[3:])
-                notice = notice.lstrip(":")
+                #notice.lstrip(":")
+                notice = notice[1:]
                 if notice == "Server is shutting down":
                     self.on_server_shutdown()
-                if "You must use TLS/SSL" in notice:
+                elif notice == "You must use TLS/SSL":
                     self.on_error("SSLRequired")
+                else:
+                    self.unknown_message(notice)
             # Join message in format:
             # :nick!user@hostname JOIN chan
             # Note: it can also be :chan
@@ -271,10 +286,16 @@ class IrcCon(object):
                 topic = topic[1:]
                 self.on_topic(chan,topic)
             else:
+                line = line[3:]
                 line = ' '.join(line)
+                # Strip leading colon
+                line = line[1:]
                 self.unknown_message(line) 
-        except:
+        # Sometimes we get IndexError
+        except IndexError:
+            line = line[3:]
             line = ' '.join(line)
+            line = line[1:]
             self.unknown_message(line)
 
     # Join a channel 
@@ -296,6 +317,7 @@ class IrcCon(object):
     def privmsg(self,who,msg):
         self.sckt.send(bytes(f"PRIVMSG {who} :{msg}\r\n","UTF-8"))
     
+    # Whois info for a user
     def whois(self,who):
         self.sckt.send(bytes(f"WHOIS {who}\r\n","UTF-8"))
     
@@ -315,6 +337,7 @@ class IrcCon(object):
         self.connect(self.HOST,self.PORT)
         self.login(self.NICK,self.USER,self.RNAME)
 
+    # Disconnect from the IRC server, TODO ensure this works
     def disconnect(self):
         self.sckt.shutdown(socket.SHUT_RDWR)
         self.sckt.close()
@@ -322,6 +345,7 @@ class IrcCon(object):
         self.userDone = False
         self.connected = False
 
+    # Nickserv handling
     def nickserv(self,action,data):
         try:
             if action == "REGISTER":
@@ -330,16 +354,17 @@ class IrcCon(object):
                 msg = f"NICKSERV REGISTER {password} {email}\r\n"
             if action == "IDENTIFY":
                 password = data[0]
-                msg = f"NICKSERV IDENTIFY {password}\r\n"
+                msg = f"NICKSERV IDENTIFY {self.NICK} {password}\r\n"
             if action == "LOGOUT":
                 msg = f"NICKSERV LOGOUT\r\n"
             if action == "DROP":
                 nick = data[0]
                 msg = f"NICKSERV DROP {nick}\r\n"
             self.sckt.send(bytes(msg,"UTF-8"))
-        # Fail silently for index errors
+        # Fail silently for any errors
         except:
-            print("IndexError at line 323")
+            pass
+
     def on_connect(self):
         pass
 
@@ -358,6 +383,9 @@ class IrcCon(object):
     def on_user_quit(self,who,hostname,msg):
         pass
     
+    def on_nickserv(self,msg):
+        pass
+
     # Called on message
     def on_message(self,who,channel,msg):
         pass
@@ -369,7 +397,6 @@ class IrcCon(object):
         pass
 
     def on_topic(self,chan,topic):
-        print(topic)
         pass
 
     def on_user_nick_change(self,who,newNick):
