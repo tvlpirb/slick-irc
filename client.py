@@ -146,6 +146,9 @@ class Client(IrcCon):
                 markUnread(chan)
                 self.window[f"{chan}L"].update(values=names[chan])
 
+    def on_topic(self,chan,topic):
+        self.window[f"{chan}T"].update(topic)
+
     def on_whois(self,line):
         line = line + "\n"
         self.window["infoB"].update(line,append=True)
@@ -180,7 +183,7 @@ class Client(IrcCon):
 # Returns the main window layout
 def mainLayout():
     # Box to display server info and other information non-specific to channels
-    info = [[sg.Multiline(size=(75,15),font=('Helvetica 10'),key="infoB",reroute_stdout=False,autoscroll=True,disabled=True)]]
+    info = [[sg.Multiline(size=(75,18),font=('Helvetica 10'),key="infoB",reroute_stdout=False,autoscroll=True,disabled=True)]]
     menu = ['SlickIRC', ['&Exit']],['&Server',['Server settings']],['&Help', ['&Commands', '---', '&About']]
     layout = [[sg.Menu(menu)],
         [sg.TabGroup([[sg.Tab("info",info)]],key="chats",selected_background_color="grey")],
@@ -196,7 +199,10 @@ def create_tab(win,channel):
     if channel in tabHist:
         win[f"{channel}"].update(visible=True)
     else:
-        element = [[sg.Multiline(size=(75, 15), font=('Helvetica 10'),key=f"{channel}B",autoscroll=True,disabled=True),sg.Listbox(values=[""],key=f"{channel}L",size=(10,10))]]
+        leftCol = [[sg.Multiline("",size=(75, 3), font=('Helvetica 10'),key=f"{channel}T",autoscroll=False,disabled=True)],
+        [sg.Multiline(size=(75, 15), font=('Helvetica 10'),key=f"{channel}B",autoscroll=True,disabled=True)]]
+        rightCol = [[sg.Listbox(values=[""],key=f"{channel}L",size=(10,13))]]
+        element = [[sg.Column(leftCol),sg.Column(rightCol)]]
         tab = sg.Tab(f"{channel}",element,key=channel)
         win["chats"].add_tab(tab)
         tabHist.append(channel)
