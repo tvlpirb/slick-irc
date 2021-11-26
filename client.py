@@ -18,6 +18,7 @@ from windows import loginWin,errorWin,commandsWin,aboutWin
 logging.basicConfig(filename='run.log', filemode='w', format='%(asctime)s - %(levelname)s - %(message)s',datefmt='%d-%b-%y %H:%M:%S')
 from sys import platform
 import os
+import datetime
 
 if platform == "darwin" or platform == "win32":
     print("\033[93mUnsupported Operating System, this program only works on Linux\033[0m")
@@ -226,6 +227,7 @@ def create_tab(win,channel):
         element = [[sg.Column(leftCol),sg.Column(rightCol)]]
         tab = sg.Tab(f"{channel}",element,key=channel)
         win["chats"].add_tab(tab)
+        load_tab(channel)
         tabHist.append(channel)
 
 # Deletes a tab, we don't truly delete it but just hide it. I can delete a tab
@@ -239,8 +241,25 @@ def save_tab(tab):
         os.mkdir("chatlog")
     f = open(f"chatlog/{tab}.txt","w+")
     tabLog = mainWin[f"{tab}B"].get()
+    tabLog = tabLog.splitlines(True)
+    try:
+        index = len(tabLog)-tabLog[::-1].index("======= End of backlog =======\n")-1
+    except ValueError:
+        index = 0
+    today = datetime.date.today()
+    date = today.strftime("%B %d, %Y")
+    tabLog.insert(index,f"======= {date} =======\n")
+    tabLog = ' '.join(tabLog)
     f.write(tabLog)
     f.close()
+
+def load_tab(tab):
+    if os.path.exists(f"chatlog/{tab}.txt"):
+        f = open(f"chatlog/{tab}.txt","r")
+        hist = f.read()
+        hist = hist + "\n" + "======= End of backlog =======\n"
+        mainWin[f"{tab}B"].update(hist,append=True)
+        f.close()
 
 # Add an asterisk infront of a tabs name to indicate there is an unread message
 def markUnread(tab):
@@ -342,6 +361,9 @@ def processCommand(win,irc,query):
             else:
                 for tab in tabHist:
                     save_tab(tab)
+            msg = "Sucessfully saved chat(s) in folder chatlog\n"
+            font = ("Helvetica",10,"bold")
+            mainWin[f"{currentTab}B"].update(msg,text_color_for_value="dark red",font_for_value=font,append=True) 
         else:
             raise InvalidCommand       
     except InvalidCommand:
