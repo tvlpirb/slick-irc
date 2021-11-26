@@ -28,6 +28,8 @@ class IrcCon(object):
             send a message to a channel or individual
         quitC(msg=None)
             quit and send a message
+        
+        TODO Complete documentation
     '''
     # Initialise a socket connection and also the default HOST and PORT
     # which are set to 127.0.0.1:6667
@@ -163,12 +165,11 @@ class IrcCon(object):
             # Ignore things such as 
             # :test3!~u@szawf88ssv98q.irc JOIN #test
             elif self.NICK + "!" in line[0]:
-                # Ignore things such as
                 pass
             # Nick non existent in format:
             # :host 401 NICK ATTEMPTEDNICK :No such nick
             elif line[1] == "401":
-                pass
+                self.on_invalid_nick()
             # TODO Invalid channel
             # Channel non existent in format:
             # :host 403 NICK CHAN :No such channel
@@ -193,18 +194,17 @@ class IrcCon(object):
                 line = ' '.join(line)
                 line = line[1:]
                 self.on_nickserv(line)
-                #self.unknown_message(line)
-            # TODO Finish notices
+            # Notice message in format:
+            # :host NOTICE nick/chan :msg
             elif line[1] == "NOTICE":
                 notice = ' '.join(line[3:])
                 #notice.lstrip(":")
                 notice = notice[1:]
-                if notice == "Server is shutting down":
-                    self.on_server_shutdown()
-                elif notice == "You must use TLS/SSL":
-                    self.on_error("SSLRequired")
+                who = line[2]
+                if who == self.NICK or who == "*":
+                    self.on_notice("info",notice)
                 else:
-                    self.unknown_message(notice)
+                    self.on_notice(who,notice)
             # Join message in format:
             # :nick!user@hostname JOIN chan
             # Note: it can also be :chan
@@ -260,7 +260,7 @@ class IrcCon(object):
             # :host 366 nick chan :End of /NAMES list.
             elif "366" in line:
                 self.startNames = False
-                pass
+                self.end_names(self.namesChan)
             # Names list message for a channel in format:
             # :host 353 nick = #chan :names
             # It's important to note the list may come as multiple 353 messages
@@ -285,11 +285,15 @@ class IrcCon(object):
                 topic = ' '.join(line[4:])
                 topic = topic[1:]
                 self.on_topic(chan,topic)
+            # Ignore RPL_TOPICTIME
+            elif line[1] == "333":
+                pass
             else:
                 line = line[3:]
                 line = ' '.join(line)
-                # Strip leading colon
-                line = line[1:]
+                if line.startswith(":"):
+                    # Strip leading colon
+                    line = line[1:]
                 self.unknown_message(line) 
         # Sometimes we get IndexError
         except IndexError:
@@ -395,10 +399,19 @@ class IrcCon(object):
 
     def on_names(self,channel,namesChan):
         pass
+    
+    def end_names(self,channel):
+        pass
 
+    def on_invalid_nick(self):
+        pass
+    
     def on_topic(self,chan,topic):
         pass
 
+    def on_notice(self,chan,msg):
+        pass
+    
     def on_user_nick_change(self,who,newNick):
         pass
 
