@@ -179,17 +179,16 @@ class Client(IrcCon):
         
     def on_names(self,channel,namesChan):
         namesChan[0] = namesChan[0].lstrip(":")
-        #print("NAMES",channel,namesChan)
         if channel not in names:
             names[channel] = []
-        # Add our own name
         names[channel] = names[channel] + namesChan
-        namelist = names[channel]
-        namelist.sort()
-        names[channel] = namelist
-        time.sleep(0.5)
+
+    def end_names(self,channel):
+        nameslist = names[channel]
+        nameslist.sort()
+        names[channel] = nameslist
         self.window[f"{channel}L"].update(values=names[channel])
-    
+
     def on_notice(self,chan,msg):
         if chan not in openTabs:
             create_tab(self.window,chan)
