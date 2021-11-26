@@ -17,6 +17,7 @@ from colorhash import ColorHash as chash
 from windows import loginWin,errorWin,commandsWin,aboutWin
 logging.basicConfig(filename='run.log', filemode='w', format='%(asctime)s - %(levelname)s - %(message)s',datefmt='%d-%b-%y %H:%M:%S')
 from sys import platform
+import re
 
 if platform == "darwin" or platform == "win32":
     print("\033[93mUnsupported Operating System, this program only works on Linux\033[0m")
@@ -168,10 +169,12 @@ class Client(IrcCon):
         # limitation. TODO Make a PR or github issue one day to fix this
         line = f"{current_time} | " + line + "\n"
         self.window["infoB"].update(line,append=True)
+        markUnread("info")
     
     def on_nickserv(self,msg):
         msg = f"{current_time} | " + "NickServ " + msg + "\n"
         self.window["infoB"].update(msg,text_color_for_value="dark red",font_for_value="Helvetica 10 bold",append=True)
+        markUnread("info")
         
     def on_names(self,channel,namesChan):
         namesChan[0] = namesChan[0].lstrip(":")
@@ -185,6 +188,18 @@ class Client(IrcCon):
         names[channel] = namelist
         time.sleep(0.5)
         self.window[f"{channel}L"].update(values=names[channel])
+    
+    def on_notice(self,chan,msg):
+        if chan not in openTabs:
+            create_tab(self.window,chan)
+            self.channels.add(chan)
+            openTabs.append(chan)
+        msg = f"{current_time} | " + "Notice " + msg + "\n"
+        font = ("Helvetica",10,"bold")
+        if msg == "Server is shutting down":
+            self.disconnect()
+        self.window[f"{chan}B"].update(msg,text_color_for_value="dark red",font_for_value=font,append=True)
+        markUnread(chan)
 
 # Returns the main window layout
 def mainLayout():
@@ -383,9 +398,9 @@ while True:
                 processCommand(mainWin,irc,query)
             else:
                 sendMsg(mainWin,irc,vals1["chats"],query)
-    if vals1["chats"] != "info":
-        if vals1["chats"].startswith("*"):
-            markRead(vals1["chats"])
+    # Mark a channel as read:
+    if vals1["chats"].startswith("*"):
+        markRead(vals1["chats"])
     if ev1 == "Server settings":
         (oldServ,oldPort) = (server,port)
         (server,port,nick,user,rname,ssl) = loginWin(server,port,nick,user,rname)
