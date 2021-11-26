@@ -112,7 +112,7 @@ class IrcCon(object):
             # Data to read
             if r:
                 buffer = ""
-                buffer += buffer+self.sckt.recv(2048).decode("UTF-8")
+                buffer += buffer+self.sckt.recv(4096).decode("UTF-8")
                 temp = buffer.split("\n")
                 # We need to pop last element as when we receive data it has
                 # \r\n and we are splitting by \n, so we'd go from "hello\r\n"
@@ -247,15 +247,15 @@ class IrcCon(object):
                     msg = ' '.join(line[2:])
                     msg.lstrip(":")
                 self.on_user_quit(who,hostname,msg)
+            # End of whois list message in format:
+            # :host 318
+            elif line[1] == "318":
+                self.startWhoList = False
             elif line[1] == "311":
                 self.startWhoList = True
                 self.on_whois(line)
             elif self.startWhoList:
                 self.on_whois(line)
-            # End of whois list message in format:
-            # :host 318
-            elif line[1] == "318":
-                self.startWhoList = False
             # End of names list message in format:
             # :host 366 nick chan :End of /NAMES list.
             elif "366" in line:
@@ -288,6 +288,10 @@ class IrcCon(object):
             # Ignore RPL_TOPICTIME
             elif line[1] == "333":
                 pass
+            elif line[1] == "322":
+                channel = line[3]
+                member = line[4]
+                self.on_list(channel,member)
             else:
                 line = line[3:]
                 line = ' '.join(line)
@@ -349,6 +353,9 @@ class IrcCon(object):
         self.userDone = False
         self.connected = False
 
+    def listChan(self):
+        self.sckt.send(bytes("LIST\r\n","UTF-8"))
+
     # Nickserv handling
     def nickserv(self,action,data):
         try:
@@ -364,6 +371,9 @@ class IrcCon(object):
             if action == "DROP":
                 nick = data[0]
                 msg = f"NICKSERV DROP {nick}\r\n"
+            if action == "VERIFY":
+                pin = data[1]
+                msg = f"NICKSERV VERIFY REGISTER {pin}\r\n"
             self.sckt.send(bytes(msg,"UTF-8"))
         # Fail silently for any errors
         except:
@@ -394,6 +404,9 @@ class IrcCon(object):
     def on_message(self,who,channel,msg):
         pass
 
+    def on_list(self,channel,members):
+        pass
+    
     def on_whois(self,line):
         pass
 

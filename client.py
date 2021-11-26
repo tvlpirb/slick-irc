@@ -11,11 +11,9 @@ this is it.
 from irclib import IrcCon
 # PySimpleGUI is a wrapper for tkinter and some other frameworks
 import PySimpleGUI as sg
-import logging
 import time
 from colorhash import ColorHash as chash
 from windows import loginWin,errorWin,commandsWin,aboutWin,filterWin
-logging.basicConfig(filename='run.log', filemode='w', format='%(asctime)s - %(levelname)s - %(message)s',datefmt='%d-%b-%y %H:%M:%S')
 from sys import platform
 import os
 import datetime
@@ -50,11 +48,11 @@ class Client(IrcCon):
     
     def on_error(self,errorType):
         if errorType == "ConnectionRefusedError":
-            logging.warning(f"{errorType} Cannot connect to server")
+            pass
 
         if errorType == "NickInUse":
             self.failedLogin = True
-            logging.warning(f"{errorType}")
+            pass
     
     def on_message(self,who,channel,msg):
         #msg = f"{current_time} | {who} > {msg}"
@@ -163,8 +161,11 @@ class Client(IrcCon):
         self.window[f"{chan}T"].update(topic)
 
     def on_whois(self,line):
-        line = line + "\n"
-        self.window["infoB"].update(line,append=True)
+        line = line[3:]
+        line = ' '.join(line)
+        msg = f"{current_time} | {line}\n"
+        self.window["infoB"].update(msg,append=True)
+        markUnread("info")
 
     def unknown_message(self,line):
         # This used to "print" to infoB box which had all console output rerouted to it
@@ -195,7 +196,10 @@ class Client(IrcCon):
         names[channel] = nameslist
         time.sleep(1)
         self.window[f"{channel}L"].update(values=names[channel])
-
+    
+    def on_list(self,channel,members):
+        msg = f"{current_time} | Chan: {channel} Members: {members}\n"
+        self.window["infoB"].update(msg,append=True,text_color_for_value="dark green",font_for_value=("Helvetica",10,"bold"))
     def on_notice(self,chan,msg):
         if chan not in openTabs:
             create_tab(self.window,chan)
@@ -372,10 +376,11 @@ def processCommand(win,irc,query):
             msg = "Sucessfully saved chat(s) in folder chatlog\n"
             font = ("Helvetica",10,"bold")
             mainWin[f"{currentTab}B"].update(msg,text_color_for_value="dark red",font_for_value=font,append=True) 
+        elif command == "list":
+            irc.listChan()
         else:
             raise InvalidCommand       
     except InvalidCommand:
-        logging.warning("User gave an invalid command")
         win["infoB"].update("Unknown command\n",append=True)
     finally:
         win["msgbox"].update("")
@@ -427,7 +432,6 @@ while True:
         loggedIn = False
     if not irc.connected:
         errorWin("Cannot connect to server")
-        logging.info("Asking user to enter information again")
         (server,port,nick,user,rname,ssl) = loginWin(server,port,nick,user,rname)
         irc.connect(server,port,ssl)
         irc.login(nick,user,rname)
