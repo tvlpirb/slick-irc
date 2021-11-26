@@ -17,7 +17,7 @@ from colorhash import ColorHash as chash
 from windows import loginWin,errorWin,commandsWin,aboutWin
 logging.basicConfig(filename='run.log', filemode='w', format='%(asctime)s - %(levelname)s - %(message)s',datefmt='%d-%b-%y %H:%M:%S')
 from sys import platform
-import re
+import os
 
 if platform == "darwin" or platform == "win32":
     print("\033[93mUnsupported Operating System, this program only works on Linux\033[0m")
@@ -234,6 +234,14 @@ def create_tab(win,channel):
 def delete_tab(win,channel):
     win[f"{channel}"].update(visible=False)
 
+def save_tab(tab):
+    if not os.path.exists("chatlog"):
+        os.mkdir("chatlog")
+    f = open(f"chatlog/{tab}.txt","w+")
+    tabLog = mainWin[f"{tab}B"].get()
+    f.write(tabLog)
+    f.close()
+
 # Add an asterisk infront of a tabs name to indicate there is an unread message
 def markUnread(tab):
     tabgroup = mainWin["chats"].Widget
@@ -326,11 +334,14 @@ def processCommand(win,irc,query):
                     msg = ' '.join(query[2:])
                     sendMsg(win,irc,nick,msg)
         elif command == "save":
-            for tab in tabHist:
-                f = open(f"{tab}.txt","w+")
-                tabLog = mainWin[f"{tab}B"].get()
-                f.write(tabLog)
-                f.close()
+            channels = query[1:]
+            if len(channels) >= 1:
+                for tab in channels:
+                    if tab in tabHist:
+                        save_tab(tab)
+            else:
+                for tab in tabHist:
+                    save_tab(tab)
         else:
             raise InvalidCommand       
     except InvalidCommand:
