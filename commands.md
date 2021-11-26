@@ -12,8 +12,8 @@ Now that you're connected to an IRC server you'll see the info tab focused, to c
 - Join channel(s), channel names typically start with # so for example #linux
 ```/join CHANNELNAMEHERE OTHERCHANNEL```
 - Leave a channel
-```/part CHANNELNAMEHERE```
-- See a users details
+```/part CHANNELNAMEHERE OTHERCHANNEL```
+- Whois, see a users details
 ```/whois USERNICK```
 - Private message a user
 ```/msg USERNICK```
@@ -33,6 +33,8 @@ Alot of servers use NICKSERV to login, the following nickserv commands are avail
 ```/msg NickServ LOGOUT```
 - Drop a nickname from nickserv
 ```/msg NickServ DROP```
+- Verify register
+```/msg NickServ VERIFY REGISTER CODERECEIVEINEMAIL```
 
 # Advanced commands
 - Mark chat as unread
@@ -41,3 +43,7 @@ Alot of servers use NICKSERV to login, the following nickserv commands are avail
 ```/save or /save all```
 - Save specific chats
 ```/save chan chan chan```
+
+# Extra features
+- Filters
+- Colors
