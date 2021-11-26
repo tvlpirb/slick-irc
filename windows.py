@@ -32,14 +32,12 @@ def loginWin(serv="",port="",nick="",user="",rname=""):
     (server,port,nick,user,rname) = (serv,port,nick,user,rname)
     ssl = False
     # Window layout
-    loginLayout = [
-        [sg.Text("Server:"),sg.Multiline(size=(17,1),default_text=server,enter_submits=False, key='SERV', do_not_clear=True),
-        sg.Text("Port:"),sg.Multiline(size=(6,1),default_text=port,enter_submits=False, key='PORT', do_not_clear=True),sg.Checkbox("SSL",default=True,key="SSL")],
-        [sg.Text("Alias/Nick:"),sg.Multiline(size=(25, 1), default_text=nick,enter_submits=False, key='NICK', do_not_clear=True)],
-        [sg.Text("Username:"),sg.Multiline(size=(25, 1), default_text=user, enter_submits=True, key='USER', do_not_clear=True)],
-        [sg.Text("Realname: (Optional)"),sg.Multiline(size=(25, 1), default_text=rname, enter_submits=True, key='RNAME', do_not_clear=True)],
-        [sg.Button("CONNECT",bind_return_key=True)]
-    ]
+    leftCol = [[sg.Text("Server:")],[sg.Text("Alias/Nick:")],[sg.Text("Username:")],[sg.Text("Realname: (Optional)")]]
+    rightCol = [[sg.Multiline(size=(17,1),default_text=server,enter_submits=False, key='SERV', do_not_clear=True),sg.Text("Port:"),sg.Multiline(size=(6,1),default_text=port,enter_submits=False, key='PORT', do_not_clear=True),sg.Checkbox("SSL",default=True,key="SSL")],\
+        [sg.Multiline(size=(25, 1), default_text=nick,enter_submits=False, key='NICK', do_not_clear=True)],\
+        [sg.Multiline(size=(25, 1), default_text=user, enter_submits=True, key='USER', do_not_clear=True)],\
+        [sg.Multiline(size=(25, 1), default_text=rname, enter_submits=True, key='RNAME', do_not_clear=True)]]
+    loginLayout = [[sg.Column(leftCol),sg.Column(rightCol)],[sg.Button("CONNECT",bind_return_key=True)]]
     loginWin = sg.Window("Login",loginLayout,element_justification="c",finalize=True)
     # See below link to manage switching fields when pressing enter
     # https://stackoverflow.com/questions/65923933/pysimplegui-set-and-get-the-cursor-position-in-a-multiline-widget
@@ -129,6 +127,7 @@ def filterWin(flist):
     filterWin = sg.Window("About",filterWinLayout,element_justification="c",finalize=True,resizable=True)
     while True:
         ev6, vals6 = filterWin.read(timeout=10)
+        # Add an item to the listbox and the filter list
         if ev6 == "Add":
             item = filterWin["item"].get()
             item.rstrip()
@@ -142,8 +141,10 @@ def filterWin(flist):
                 filterWin["item"].update("")
         elif ev6 == "Delete":
             item = filterWin["box"].get()
-            flist.remove(item[0])
-            filterWin["box"].update(values=flist)
+            # Otherwise we'll get an index error deleting nothing
+            if len(item) == 1:
+                flist.remove(item[0])
+                filterWin["box"].update(values=flist)
         if ev6 == sg.WIN_CLOSED or ev6 == "Exit":
             break
     filterWin.close()

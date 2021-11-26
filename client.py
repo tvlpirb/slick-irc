@@ -211,12 +211,12 @@ class Client(IrcCon):
 # Returns the main window layout
 def mainLayout():
     # Box to display server info and other information non-specific to channels
-    info = [[sg.Multiline(size=(75,18),font=('Helvetica 10'),key="infoB",reroute_stdout=False,autoscroll=True,disabled=True)]]
+    info = [[sg.Multiline(size=(93,19),font=('Helvetica 10'),key="infoB",reroute_stdout=False,autoscroll=True,disabled=True)]]
     menu = ['SlickIRC', ['&Exit']],['&Server',['Server settings']],["&Filters",['Filter settings']],['&Help', ['&Commands', '---', '&About'],]
     layout = [[sg.Menu(menu)],
         [sg.TabGroup([[sg.Tab("info",info)]],key="chats",selected_background_color="grey")],
-        [sg.Multiline(size=(60, 2), enter_submits=True, key='msgbox', do_not_clear=True),
-        sg.Button('SEND', bind_return_key=True,visible=False),
+        [sg.Multiline(size=(59, 2), enter_submits=True, key='msgbox', do_not_clear=True),
+        sg.Button('SEND', bind_return_key=True,visible=True),
         sg.Button('EXIT',visible=False)
         ]]
     return layout
@@ -227,7 +227,7 @@ def create_tab(win,channel):
     if channel in tabHist:
         win[f"{channel}"].update(visible=True)
     else:
-        leftCol = [[sg.Multiline("",size=(75, 3), font=('Helvetica 10'),key=f"{channel}T",autoscroll=False,disabled=True)],
+        leftCol = [[sg.Multiline("No channel topic",size=(75, 3), font=('Helvetica 10'),key=f"{channel}T",autoscroll=False,disabled=True)],
         [sg.Multiline(size=(75, 15), font=('Helvetica 10'),key=f"{channel}B",autoscroll=True,disabled=True)]]
         rightCol = [[sg.Listbox(values=[""],key=f"{channel}L",size=(10,13))]]
         element = [[sg.Column(leftCol),sg.Column(rightCol)]]
@@ -245,7 +245,9 @@ def delete_tab(win,channel):
 def save_tab(tab):
     if not os.path.exists("chatlog"):
         os.mkdir("chatlog")
-    f = open(f"chatlog/{tab}.txt","w+")
+    if not os.path.exists(f"chatlog/{irc.HOST}"):
+        os.mkdir(f"chatlog/{irc.HOST}")
+    f = open(f"chatlog/{irc.HOST}/{tab}.txt","w+")
     tabLog = mainWin[f"{tab}B"].get()
     tabLog = tabLog.splitlines(True)
     try:
@@ -260,8 +262,8 @@ def save_tab(tab):
     f.close()
 
 def load_tab(tab):
-    if os.path.exists(f"chatlog/{tab}.txt"):
-        f = open(f"chatlog/{tab}.txt","r")
+    if os.path.exists(f"chatlog/{irc.HOST}/{tab}.txt"):
+        f = open(f"chatlog/{irc.HOST}/{tab}.txt","r")
         hist = f.read()
         hist = hist + "\n" + "======= End of backlog =======\n"
         mainWin[f"{tab}B"].update(hist,append=True)
