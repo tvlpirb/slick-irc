@@ -112,7 +112,7 @@ class IrcCon(object):
             # Data to read
             if r:
                 buffer = ""
-                buffer += buffer+self.sckt.recv(1024).decode("UTF-8")
+                buffer += buffer+self.sckt.recv(2048).decode("UTF-8")
                 temp = buffer.split("\n")
                 # We need to pop last element as when we receive data it has
                 # \r\n and we are splitting by \n, so we'd go from "hello\r\n"

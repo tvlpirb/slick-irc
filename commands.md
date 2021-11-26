@@ -33,3 +33,11 @@ Alot of servers use NICKSERV to login, the following nickserv commands are avail
 ```/msg NickServ LOGOUT```
 - Drop a nickname from nickserv
 ```/msg NickServ DROP```
+
+# Advanced commands
+- Mark chat as unread
+```/unread CHANNELNAME```
+- Save chat all chats to a text file
+```/save or /save all```
+- Save specific chats
+```/save chan chan chan```
