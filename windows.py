@@ -120,3 +120,27 @@ def aboutWin():
         if ev5 == sg.WIN_CLOSED or ev5 == "Okay":
             break
     aboutWin.close()
+
+def filterWin(flist):
+    filterWinLayout = [[sg.Text("Filter list")],
+    [sg.Listbox(values=flist,key="box",size=(10,10),expand_x=True,expand_y=True)],
+    [sg.Multiline("",size=(10,1),key="item",enter_submits=True,do_not_clear=True)],
+    [sg.Button("Add",bind_return_key=True),sg.Button("Exit")]]
+    filterWin = sg.Window("About",filterWinLayout,element_justification="c",finalize=True,resizable=True)
+    while True:
+        ev6, vals6 = filterWin.read(timeout=10)
+        if ev6 == "Add":
+            item = filterWin["item"].get()
+            item.rstrip()
+            item.lstrip()
+            item.strip("\n")
+            if item != "":
+                if item not in flist:
+                    item = item.lower()
+                    flist.append(item)
+                    filterWin["box"].update(values=flist)
+                filterWin["item"].update("")     
+        if ev6 == sg.WIN_CLOSED or ev6 == "Exit":
+            break
+    filterWin.close()
+    return flist

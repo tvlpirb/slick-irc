@@ -14,7 +14,7 @@ import PySimpleGUI as sg
 import logging
 import time
 from colorhash import ColorHash as chash
-from windows import loginWin,errorWin,commandsWin,aboutWin
+from windows import loginWin,errorWin,commandsWin,aboutWin,filterWin
 logging.basicConfig(filename='run.log', filemode='w', format='%(asctime)s - %(levelname)s - %(message)s',datefmt='%d-%b-%y %H:%M:%S')
 from sys import platform
 import os
@@ -58,6 +58,12 @@ class Client(IrcCon):
     
     def on_message(self,who,channel,msg):
         #msg = f"{current_time} | {who} > {msg}"
+        check = msg.lower()
+        check = set(check.split())
+        # Filter out messages
+        for item in fList:
+            if item in check:
+                return
         if channel == self.NICK:
             channel = who
         if channel not in self.channels:
@@ -187,6 +193,7 @@ class Client(IrcCon):
         nameslist = names[channel]
         nameslist.sort()
         names[channel] = nameslist
+        time.sleep(1)
         self.window[f"{channel}L"].update(values=names[channel])
 
     def on_notice(self,chan,msg):
@@ -205,7 +212,7 @@ class Client(IrcCon):
 def mainLayout():
     # Box to display server info and other information non-specific to channels
     info = [[sg.Multiline(size=(75,18),font=('Helvetica 10'),key="infoB",reroute_stdout=False,autoscroll=True,disabled=True)]]
-    menu = ['SlickIRC', ['&Exit']],['&Server',['Server settings']],['&Help', ['&Commands', '---', '&About']]
+    menu = ['SlickIRC', ['&Exit']],['&Server',['Server settings']],["&Filters",['Filter settings']],['&Help', ['&Commands', '---', '&About'],]
     layout = [[sg.Menu(menu)],
         [sg.TabGroup([[sg.Tab("info",info)]],key="chats",selected_background_color="grey")],
         [sg.Multiline(size=(60, 2), enter_submits=True, key='msgbox', do_not_clear=True),
@@ -396,6 +403,7 @@ irc = Client(mainWin)
 irc.connect(server,port,ssl)
 loggedIn = False
 failedLogin = False
+fList = []
 
 # All the tabs seen so far
 tabHist = ["info"]
@@ -442,6 +450,8 @@ while True:
         irc.login(nick,user,rname)
     if ev1 == "Commands":
         commandsWin() 
+    if ev1 == "Filter settings":
+        fList = filterWin(fList)
     if ev1 == "About":
         aboutWin()
     # User wants to exit :(
