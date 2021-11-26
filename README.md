@@ -1,6 +1,9 @@
 # Slick IRC
 A simple IRC client written in python for my term project, written for Linux.
 
+# Demo
+[https://youtu.be/As7StxtSloc](https://youtu.be/As7StxtSloc)
+
 # Installation
 1. Clone repo ```git clone https://github.com/tvlpirb/slick-irc```
 2. Install the required dependencies ```pip install -r requirements.txt```
