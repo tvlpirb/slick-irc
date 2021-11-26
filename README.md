@@ -1,5 +1,6 @@
 # Slick IRC
 A simple IRC client written in python for my term project, written for Linux.
+You can connect to public IRC servers over SSL and chat
 
 # Demo
 [https://youtu.be/As7StxtSloc](https://youtu.be/As7StxtSloc)
